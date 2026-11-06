@@ -8,13 +8,16 @@ import com.leandro.unibook.auth.presentation.SignUpUiState
 import com.leandro.unibook.auth.presentation.SignUpViewModel
 import com.leandro.unibook.auth.presentation.LoginViewModel
 import com.leandro.unibook.auth.presentation.LoginScreen
+import com.leandro.unibook.auth.presentation.LoginUiState
 import com.leandro.unibook.auth.presentation.SignUpScreen
+import com.leandro.unibook.home.HomeScreen
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
 
 enum class AuthScreenState {
     LOGIN,
-    SIGN_UP
+    SIGN_UP,
+    HOME
 }
 
 @Composable
@@ -30,6 +33,15 @@ fun App() {
                     AuthScreenState.LOGIN -> {
                         val viewModel: LoginViewModel = koinViewModel()
                         val uiState by viewModel.uiState.collectAsState()
+
+                        LaunchedEffect(uiState) {
+                            val state = uiState
+                            if (state is LoginUiState.Success) {
+                                successMessage = null
+                                viewModel.resetState()
+                                currentScreen = AuthScreenState.HOME
+                            }
+                        }
 
                         LoginScreen(
                             uiState = uiState,
@@ -73,6 +85,7 @@ fun App() {
                             }
                         )
                     }
+                    AuthScreenState.HOME -> HomeScreen()
                 }
             }
         }
