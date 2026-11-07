@@ -77,12 +77,12 @@ fun App() {
                                 viewModel.resetState()
                                 currentScreen = AuthScreenState.LOGIN
                             },
-                            onSignUpClick = { firstName, lastName, email, pass ->
+                            onSignUpClick = { firstName, lastName, email, pass, confirmPass ->
                                 viewModel.onRegister(
                                     nome = "$firstName $lastName".trim(),
                                     email = email,
                                     senha = pass,
-                                    confirmSenha = pass
+                                    confirmSenha = confirmPass
                                 )
                             }
                         )

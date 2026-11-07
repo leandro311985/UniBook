@@ -31,7 +31,13 @@ import com.leandro.unibook.ui.theme.AppColors
 fun SignUpScreen(
     uiState: SignUpUiState = SignUpUiState.Idle,
     onNavigateToLogin: () -> Unit,
-    onSignUpClick: (firstName: String, lastName: String, email: String, pass: String) -> Unit = { _, _, _, _ -> }
+    onSignUpClick: (
+        firstName: String,
+        lastName: String,
+        email: String,
+        pass: String,
+        confirmPass: String
+    ) -> Unit = { _, _, _, _, _ -> }
 ) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -149,7 +155,7 @@ fun SignUpScreen(
                         onDone = {
                             if (!isLoading) {
                                 focusManager.clearFocus()
-                                onSignUpClick(firstName, lastName, email, password)
+                                onSignUpClick(firstName, lastName, email, password, confirmPassword)
                             }
                         }
                     )
@@ -161,7 +167,7 @@ fun SignUpScreen(
                     onClick = {
                         if (!isLoading) {
                             focusManager.clearFocus()
-                            onSignUpClick(firstName, lastName, email, password)
+                            onSignUpClick(firstName, lastName, email, password, confirmPassword)
                         }
                     },
                     enabled = !isLoading,

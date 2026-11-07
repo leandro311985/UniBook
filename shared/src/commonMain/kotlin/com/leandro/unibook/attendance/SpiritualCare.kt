@@ -41,7 +41,7 @@ fun FormScreen(onBack: () -> Unit = {}) {
 @Composable
 fun AttendanceScreen(
     uiState: AttendanceUiState = AttendanceUiState.Idle,
-    onSave: (AttendanceParams) -> Unit = {},
+    onSave: (AttendanceParams) -> Unit,
     onBack: () -> Unit = {}
 ) {
     var name by remember { mutableStateOf("") }
@@ -188,11 +188,15 @@ fun AttendanceScreen(
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     when (uiState) {
-                        AttendanceUiState.Loading -> CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
+                        AttendanceUiState.Loading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("Enviando...")
+                        }
                         else -> Text(
                             "Salvar atendimento",
                             fontSize = 16.sp,
