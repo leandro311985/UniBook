@@ -25,14 +25,13 @@ jobs:
           distribution: zulu
           java-version: "21"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-37"
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Accept Android SDK Licenses & Install Platform 37
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-37" "build-tools;35.0.0"
 
       - name: Run tests and build Android app
         run: ./gradlew :shared:testAndroidHostTest :androidApp:assembleDebug

@@ -53,13 +53,14 @@ class AttendanceApiServiceTest {
         val sentRequest = assertNotNull(capturedRequest)
         assertEquals(HttpMethod.Post, sentRequest.method)
         assertEquals("/api/atendimentos", sentRequest.url.encodedPath)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", sentRequest.headers["X-Device-Id"])
         val sentBody = sentRequest.body as TextContent
         assertEquals(
             ContentType.Application.Json.toString(),
             sentBody.contentType.toString()
         )
         assertEquals(
-            """{"nome":"Maria Silva","telefone":"11999999999","situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","dataAtendimento":"2026-11-07"}""",
+            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente"}""",
             sentBody.text
         )
     }

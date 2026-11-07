@@ -5,8 +5,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AttendanceRequestDto(
     val nome: String,
+    val endereco: String? = null,
+    val bairro: String? = null,
     val telefone: String,
+    val email: String? = null,
     val situacaoNaIgreja: List<String>,
     val maiorProblema: String,
-    val dataAtendimento: String
+    val cultosAFrequentar: String? = null,
+    val responsavelAcompanhamento: String? = null,
+    val dataAtendimento: String,
+    val vistoDoPastor: String? = "Pendente"
 )

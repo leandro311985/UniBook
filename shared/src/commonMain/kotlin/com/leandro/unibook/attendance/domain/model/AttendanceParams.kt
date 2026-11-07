@@ -2,10 +2,16 @@ package com.leandro.unibook.attendance.domain.model
 
 data class AttendanceParams(
     val nome: String,
+    val endereco: String = "",
+    val bairro: String = "",
     val telefone: String,
+    val email: String = "",
     val situacaoNaIgreja: List<ChurchSituation>,
     val maiorProblema: String,
-    val dataAtendimento: String
+    val cultosAFrequentar: String = "",
+    val responsavelAcompanhamento: String = "",
+    val dataAtendimento: String,
+    val vistoDoPastor: String = "Pendente"
 )
 
 enum class ChurchSituation {

@@ -2,12 +2,15 @@ package com.leandro.unibook.attendance
 
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,14 +48,29 @@ fun AttendanceScreen(
     onBack: () -> Unit = {}
 ) {
     var name by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var neighborhood by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
 
     var firstVisit by remember { mutableStateOf(false) }
     var away by remember { mutableStateOf(false) }
     var member by remember { mutableStateOf(false) }
 
     var mainProblem by remember { mutableStateOf("") }
-    var attendanceDate by remember { mutableStateOf("") }
+    var cultsToAttend by remember { mutableStateOf("") }
+    var responsiblePerson by remember { mutableStateOf("") }
+    var attendanceDate by remember { mutableStateOf("2026-11-07") }
+    var pastorApproval by remember { mutableStateOf("Pendente") }
+
+    val scrollState = rememberScrollState()
+
+    // Efeito para rolar suavemente até o topo ao receber um erro ou sucesso
+    LaunchedEffect(uiState) {
+        if (uiState is AttendanceUiState.Error || uiState is AttendanceUiState.Success) {
+            scrollState.animateScrollTo(0)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -88,68 +106,143 @@ fun AttendanceScreen(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
+            // BANNER DE FEEDBACK DE ERRO OU SUCESSO NO TOPO
+            when (val state = uiState) {
+                is AttendanceUiState.Error -> {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.ErrorOutline,
+                                contentDescription = null,
+                                tint = Color(0xFFC62828),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = state.message,
+                                color = Color(0xFFC62828),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                AttendanceUiState.Success -> {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircleOutline,
+                                contentDescription = null,
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = "Atendimento salvo com sucesso!",
+                                color = Color(0xFF2E7D32),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                else -> Unit
+            }
+
             // DADOS PESSOAIS
             FormSection("Dados pessoais") {
-                FormInput("Nome completo", name, { name = it })
-                FormInput(
-                    "Telefone / Celular",
-                    phone,
-                    { phone = it }
-                )
+                FormInput("Nome completo *", name, { name = it }, placeholder = "Maria Silva")
+                FormInput("Endereço", address, { address = it }, placeholder = "Rua das Flores, 123")
+                FormInput("Bairro", neighborhood, { neighborhood = it }, placeholder = "Centro")
+                FormInput("Telefone / Celular *", phone, { phone = it }, placeholder = "11999999999")
+                FormInput("E-mail", email, { email = it }, placeholder = "maria@example.com")
             }
 
             // SITUAÇÃO NA IGREJA
             FormSection("Situação na igreja") {
                 Column {
-                    FormCheck(
-                        "Primeira vez",
-                        firstVisit
-                    ) { firstVisit = it }
-
-                    FormCheck(
-                        "Afastado(a)",
-                        away
-                    ) { away = it }
-
-                    FormCheck(
-                        "Membro",
-                        member
-                    ) { member = it }
+                    FormCheck("Primeira vez", firstVisit) { firstVisit = it }
+                    FormCheck("Afastado(a)", away) { away = it }
+                    FormCheck("Membro", member) { member = it }
                 }
             }
 
             // PRINCIPAL NECESSIDADE
-            FormSection("Qual é o seu maior problema?") {
+            FormSection("Qual é o seu maior problema / necessidade?") {
                 Text(
-                    "Conte como podemos ajudar você.",
+                    "Descreva como a igreja pode orar e acompanhar.",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
+                Spacer(Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = mainProblem,
                     onValueChange = { mainProblem = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp),
+                        .height(120.dp),
                     placeholder = {
-                        Text("Descreva sua necessidade...")
+                        Text("Descreva a necessidade ou pedido de oração...")
                     },
                     shape = RoundedCornerShape(12.dp)
                 )
             }
 
-            // REGISTRO
-            FormSection("Registro do atendimento") {
-                FormInput(
-                    "Data do atendimento",
-                    attendanceDate,
-                    { attendanceDate = it },
-                    placeholder = "AAAA-MM-DD"
+            // ACOMPANHAMENTO PASTORAL
+            FormSection("Acompanhamento pastoral") {
+                FormInput("Cultos a frequentar", cultsToAttend, { cultsToAttend = it }, placeholder = "Ex: Domingo, Quarta")
+                FormInput("Responsável pelo acompanhamento", responsiblePerson, { responsiblePerson = it }, placeholder = "Nome do servo / obreiro")
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Data do atendimento *", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Navy)
+                    Text(
+                        "Hoje",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold,
+                        modifier = Modifier
+                            .clickable { attendanceDate = "2026-11-07" }
+                            .padding(4.dp)
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = attendanceDate,
+                    onValueChange = { attendanceDate = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("AAAA-MM-DD", fontSize = 14.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp)
                 )
+
+                Spacer(Modifier.height(12.dp))
+                FormInput("Visto do Pastor", pastorApproval, { pastorApproval = it }, placeholder = "Pendente")
             }
 
             Spacer(Modifier.height(20.dp))
@@ -160,27 +253,57 @@ fun AttendanceScreen(
             shadowElevation = 8.dp,
             color = Color.White
         ) {
-            Column {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                // FEEDBACK ADICIONAL JUNTO AO BOTÃO
+                when (val state = uiState) {
+                    is AttendanceUiState.Error -> {
+                        Text(
+                            text = "⚠️ ${state.message}",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    AttendanceUiState.Success -> {
+                        Text(
+                            text = "✅ Atendimento salvo com sucesso!",
+                            color = Color(0xFF2E7D32),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    else -> Unit
+                }
+
                 Button(
                     onClick = {
                         onSave(
                             AttendanceParams(
                                 nome = name,
+                                endereco = address,
+                                bairro = neighborhood,
                                 telefone = phone,
+                                email = email,
                                 situacaoNaIgreja = buildList {
                                     if (firstVisit) add(ChurchSituation.PRIMEIRA_VEZ)
                                     if (away) add(ChurchSituation.AFASTADO)
                                     if (member) add(ChurchSituation.MEMBRO)
                                 },
                                 maiorProblema = mainProblem,
-                                dataAtendimento = attendanceDate
+                                cultosAFrequentar = cultsToAttend,
+                                responsavelAcompanhamento = responsiblePerson,
+                                dataAtendimento = attendanceDate,
+                                vistoDoPastor = pastorApproval
                             )
                         )
                     },
                     enabled = uiState !is AttendanceUiState.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
                         .height(54.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Navy
@@ -203,19 +326,6 @@ fun AttendanceScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                }
-                when (val state = uiState) {
-                    is AttendanceUiState.Error -> Text(
-                        state.message,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
-                    )
-                    AttendanceUiState.Success -> Text(
-                        "Atendimento salvo com sucesso.",
-                        color = Color(0xFF2E7D32),
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
-                    )
-                    else -> Unit
                 }
             }
         }

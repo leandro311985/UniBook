@@ -15,10 +15,16 @@ class AttendanceRepositoryImpl(
             apiService.create(
                 AttendanceRequestDto(
                     nome = params.nome.trim(),
+                    endereco = params.endereco.trim().ifEmpty { null },
+                    bairro = params.bairro.trim().ifEmpty { null },
                     telefone = params.telefone.trim(),
+                    email = params.email.trim().ifEmpty { null },
                     situacaoNaIgreja = params.situacaoNaIgreja.map { it.name },
                     maiorProblema = params.maiorProblema.trim(),
-                    dataAtendimento = params.dataAtendimento
+                    cultosAFrequentar = params.cultosAFrequentar.trim().ifEmpty { null },
+                    responsavelAcompanhamento = params.responsavelAcompanhamento.trim().ifEmpty { null },
+                    dataAtendimento = params.dataAtendimento,
+                    vistoDoPastor = params.vistoDoPastor.ifEmpty { "Pendente" }
                 )
             )
             AttendanceResult.Success
