@@ -18,7 +18,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 class AuthApiService(
-    private val baseUrl: String = "http://10.0.2.2:8082",
+    private val baseUrl: String = API_BASE_URL,
     tokenStorage: TokenStorage,
     private val client: HttpClient = createDefaultHttpClient(tokenStorage),
     private val loginClient: HttpClient = createDefaultHttpClient()

@@ -11,7 +11,7 @@ import com.leandro.unibook.auth.presentation.SignUpViewModel
 import org.koin.dsl.module
 
 val authModule = module {
-    single { AuthApiService(tokenStorage = get()) }
+    single { AuthApiService(tokenStorage = get(), client = get()) }
     single<AuthRepository> {
         AuthRepositoryImpl(
             apiService = get(),

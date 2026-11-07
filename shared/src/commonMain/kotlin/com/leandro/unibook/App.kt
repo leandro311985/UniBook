@@ -10,6 +10,7 @@ import com.leandro.unibook.auth.presentation.LoginViewModel
 import com.leandro.unibook.auth.presentation.LoginScreen
 import com.leandro.unibook.auth.presentation.LoginUiState
 import com.leandro.unibook.auth.presentation.SignUpScreen
+import com.leandro.unibook.attendance.FormScreen
 import com.leandro.unibook.home.HomeScreen
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
@@ -17,7 +18,8 @@ import org.koin.compose.viewmodel.koinViewModel
 enum class AuthScreenState {
     LOGIN,
     SIGN_UP,
-    HOME
+    HOME,
+    FORM
 }
 
 @Composable
@@ -85,7 +87,12 @@ fun App() {
                             }
                         )
                     }
-                    AuthScreenState.HOME -> HomeScreen()
+                    AuthScreenState.HOME -> HomeScreen(
+                        onAttendanceClick = { currentScreen = AuthScreenState.FORM }
+                    )
+                    AuthScreenState.FORM -> FormScreen(
+                        onBack = { currentScreen = AuthScreenState.HOME }
+                    )
                 }
             }
         }

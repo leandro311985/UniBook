@@ -27,12 +27,12 @@ private val Blue = Color(0xFF1559D6)
 private val Background = Color(0xFFF8F9FD)
 
 @Composable
-fun HomeScreen(){
-    HomeScreenContent()
+fun HomeScreen(onAttendanceClick: () -> Unit = {}) {
+    HomeScreenContent(onAttendanceClick = onAttendanceClick)
 }
 
 @Composable
-fun HomeScreenContent(){
+fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
         var selectedTab by remember { mutableIntStateOf(0) }
 
         Scaffold(
@@ -230,7 +230,11 @@ fun HomeScreenContent(){
                                     icon = service.second,
                                     iconColor = service.third,
                                     modifier = Modifier.weight(1f),
-                                    onClick = {}
+                                    onClick = {
+                                        if (service.first.startsWith("Atendimento")) {
+                                            onAttendanceClick()
+                                        }
+                                    }
                                 )
                             }
                         }
