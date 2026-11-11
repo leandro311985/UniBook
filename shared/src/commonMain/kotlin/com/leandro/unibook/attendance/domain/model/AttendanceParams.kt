@@ -11,7 +11,8 @@ data class AttendanceParams(
     val cultosAFrequentar: String = "",
     val responsavelAcompanhamento: String = "",
     val dataAtendimento: String,
-    val vistoDoPastor: String = "Pendente"
+    val vistoDoPastor: String = "Pendente",
+    val fotoBase64: String = ""
 )
 
 enum class ChurchSituation {

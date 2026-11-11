@@ -20,9 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceParams
+import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.domain.model.ChurchSituation
 import com.leandro.unibook.attendance.presentation.AttendanceUiState
 import com.leandro.unibook.attendance.presentation.AttendanceViewModel
+import com.leandro.unibook.attendance.ui.CameraPhotoPicker
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Navy = Color(0xFF10234E)
@@ -30,38 +32,60 @@ private val Gold = Color(0xFFE5A51B)
 private val Background = Color(0xFFF7F8FC)
 
 @Composable
-fun FormScreen(onBack: () -> Unit = {}) {
+fun FormScreen(
+    attendance: AttendanceItem? = null,
+    onBack: () -> Unit = {}
+) {
     val viewModel: AttendanceViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
     AttendanceScreen(
+        attendance = attendance,
         uiState = uiState,
-        onSave = viewModel::save,
+        onSave = { params -> viewModel.save(params, attendance?.id) },
         onBack = onBack
     )
 }
 
 @Composable
 fun AttendanceScreen(
+    attendance: AttendanceItem? = null,
     uiState: AttendanceUiState = AttendanceUiState.Idle,
     onSave: (AttendanceParams) -> Unit,
     onBack: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var neighborhood by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var photoBase64 by remember(attendance?.id) { mutableStateOf(attendance?.fotoBase64.orEmpty()) }
+    var name by remember(attendance?.id) { mutableStateOf(attendance?.nome.orEmpty()) }
+    var address by remember(attendance?.id) { mutableStateOf(attendance?.endereco.orEmpty()) }
+    var neighborhood by remember(attendance?.id) { mutableStateOf(attendance?.bairro.orEmpty()) }
+    var phone by remember(attendance?.id) { mutableStateOf(attendance?.telefone.orEmpty()) }
+    var email by remember(attendance?.id) { mutableStateOf(attendance?.email.orEmpty()) }
 
-    var firstVisit by remember { mutableStateOf(false) }
-    var away by remember { mutableStateOf(false) }
-    var member by remember { mutableStateOf(false) }
+    var firstVisit by remember(attendance?.id) {
+        mutableStateOf("PRIMEIRA_VEZ" in attendance?.situacaoNaIgreja.orEmpty())
+    }
+    var away by remember(attendance?.id) {
+        mutableStateOf("AFASTADO" in attendance?.situacaoNaIgreja.orEmpty())
+    }
+    var member by remember(attendance?.id) {
+        mutableStateOf("MEMBRO" in attendance?.situacaoNaIgreja.orEmpty())
+    }
 
-    var mainProblem by remember { mutableStateOf("") }
-    var cultsToAttend by remember { mutableStateOf("") }
-    var responsiblePerson by remember { mutableStateOf("") }
-    var attendanceDate by remember { mutableStateOf("2026-11-07") }
-    var pastorApproval by remember { mutableStateOf("Pendente") }
+    var mainProblem by remember(attendance?.id) {
+        mutableStateOf(attendance?.maiorProblema.orEmpty())
+    }
+    var cultsToAttend by remember(attendance?.id) {
+        mutableStateOf(attendance?.cultosAFrequentar.orEmpty())
+    }
+    var responsiblePerson by remember(attendance?.id) {
+        mutableStateOf(attendance?.responsavelAcompanhamento.orEmpty())
+    }
+    var attendanceDate by remember(attendance?.id) {
+        mutableStateOf(attendance?.dataAtendimento ?: "2026-11-07")
+    }
+    var pastorApproval by remember(attendance?.id) {
+        mutableStateOf(attendance?.vistoDoPastor ?: "Pendente")
+    }
 
     val scrollState = rememberScrollState()
 
@@ -90,7 +114,7 @@ fun AttendanceScreen(
             }
             Column {
                 Text(
-                    "Atendimento",
+                    if (attendance == null) "Atendimento" else "Editar atendimento",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Navy
@@ -168,6 +192,14 @@ fun AttendanceScreen(
                     }
                 }
                 else -> Unit
+            }
+
+            // CAPTURA DE FOTO
+            FormSection("Foto da Pessoa (Câmera)") {
+                CameraPhotoPicker(
+                    photoBase64 = photoBase64,
+                    onPhotoCaptured = { photoBase64 = it }
+                )
             }
 
             // DADOS PESSOAIS
@@ -297,7 +329,8 @@ fun AttendanceScreen(
                                 cultosAFrequentar = cultsToAttend,
                                 responsavelAcompanhamento = responsiblePerson,
                                 dataAtendimento = attendanceDate,
-                                vistoDoPastor = pastorApproval
+                                vistoDoPastor = pastorApproval,
+                                fotoBase64 = photoBase64
                             )
                         )
                     },
@@ -321,7 +354,7 @@ fun AttendanceScreen(
                             Text("Enviando...")
                         }
                         else -> Text(
-                            "Salvar atendimento",
+                            if (attendance == null) "Salvar atendimento" else "Salvar alterações",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )

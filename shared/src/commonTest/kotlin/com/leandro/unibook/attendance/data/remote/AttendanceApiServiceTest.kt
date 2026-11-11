@@ -41,7 +41,8 @@ class AttendanceApiServiceTest {
             telefone = "11999999999",
             situacaoNaIgreja = listOf("PRIMEIRA_VEZ"),
             maiorProblema = "Está passando por dificuldades",
-            dataAtendimento = "2026-11-07"
+            dataAtendimento = "2026-11-07",
+            fotoBase64 = "dGVzdA=="
         )
 
         try {
@@ -60,8 +61,47 @@ class AttendanceApiServiceTest {
             sentBody.contentType.toString()
         )
         assertEquals(
-            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente"}""",
+            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente","fotoBase64":"dGVzdA=="}""",
             sentBody.text
         )
+    }
+
+    @Test
+    fun updatePutsAttendanceToIdEndpoint() = runTest {
+        var capturedRequest: HttpRequestData? = null
+        val client = HttpClient(
+            MockEngine { request ->
+                capturedRequest = request
+                respond(
+                    content = "",
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                )
+            }
+        ) {
+            install(ContentNegotiation) {
+                json()
+            }
+        }
+
+        try {
+            AttendanceApiService(client, "http://localhost:8082").update(
+                id = "attendance-123",
+                request = AttendanceRequestDto(
+                    nome = "Maria Silva",
+                    telefone = "11999999999",
+                    situacaoNaIgreja = listOf("MEMBRO"),
+                    maiorProblema = "Acompanhamento",
+                    dataAtendimento = "2026-11-07"
+                )
+            )
+        } finally {
+            client.close()
+        }
+
+        val sentRequest = assertNotNull(capturedRequest)
+        assertEquals(HttpMethod.Put, sentRequest.method)
+        assertEquals("/api/atendimentos/attendance-123", sentRequest.url.encodedPath)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", sentRequest.headers["X-Device-Id"])
     }
 }

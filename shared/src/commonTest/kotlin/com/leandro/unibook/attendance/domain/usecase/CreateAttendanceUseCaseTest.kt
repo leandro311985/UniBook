@@ -1,9 +1,12 @@
 package com.leandro.unibook.attendance.domain.usecase
 
+import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.domain.model.AttendanceParams
 import com.leandro.unibook.attendance.domain.model.AttendanceResult
 import com.leandro.unibook.attendance.domain.model.ChurchSituation
 import com.leandro.unibook.attendance.domain.repository.AttendanceRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -64,6 +67,23 @@ class CreateAttendanceUseCaseTest {
         override suspend fun create(params: AttendanceParams): AttendanceResult {
             receivedParams = params
             return AttendanceResult.Success
+        }
+
+        override suspend fun update(id: String, params: AttendanceParams): AttendanceResult {
+            receivedParams = params
+            return AttendanceResult.Success
+        }
+
+        override suspend fun getAll(): List<AttendanceItem> {
+            return emptyList()
+        }
+
+        override fun observeAll(): Flow<List<AttendanceItem>> {
+            return flowOf(emptyList())
+        }
+
+        override suspend fun syncPending(): Int {
+            return 0
         }
     }
 }

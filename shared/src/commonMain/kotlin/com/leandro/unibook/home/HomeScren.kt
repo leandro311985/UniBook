@@ -19,13 +19,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.attendance.ui.AttendancePhoto
+import com.leandro.unibook.home.presentation.HomeUiState
+import com.leandro.unibook.home.presentation.HomeViewModel
 import com.leandro.unibook.ui.theme.AppColors
+import org.koin.compose.viewmodel.koinViewModel
 
 private val Gold = Color(0xFFE5A51B)
 private val Background = Color(0xFFF9FAFC)
@@ -34,12 +38,36 @@ private val TextDark = Color(0xFF1E293B)
 private val TextMuted = Color(0xFF64748B)
 
 @Composable
-fun HomeScreen(onAttendanceClick: () -> Unit = {}) {
-    HomeScreenContent(onAttendanceClick = onAttendanceClick)
+fun HomeScreen(
+    onAttendanceClick: () -> Unit = {},
+    onViewAttendance: (AttendanceItem) -> Unit = {},
+    onEditAttendance: (AttendanceItem) -> Unit = {}
+) {
+    val viewModel: HomeViewModel = koinViewModel()
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Recarrega a lista ao abrir a tela Home
+    LaunchedEffect(Unit) {
+        viewModel.loadAttendances()
+    }
+
+    HomeScreenContent(
+        uiState = uiState,
+        onAttendanceClick = onAttendanceClick,
+        onViewAttendance = onViewAttendance,
+        onEditAttendance = onEditAttendance,
+        onRefresh = { viewModel.loadAttendances() }
+    )
 }
 
 @Composable
-fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
+fun HomeScreenContent(
+    uiState: HomeUiState = HomeUiState.Loading,
+    onAttendanceClick: () -> Unit = {},
+    onViewAttendance: (AttendanceItem) -> Unit = {},
+    onEditAttendance: (AttendanceItem) -> Unit = {},
+    onRefresh: () -> Unit = {}
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -96,7 +124,6 @@ fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
                     .padding(horizontal = 22.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botão de Notificação
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -114,7 +141,6 @@ fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
                     }
                 }
 
-                // Localização / Congregação
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -146,7 +172,6 @@ fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
                     }
                 }
 
-                // Perfil do Servo / Obreiro
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -264,7 +289,7 @@ fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
 
             Spacer(Modifier.height(26.dp))
 
-            // Seção: Atendimentos Recentes / Acompanhamento
+            // Seção: Atendimentos Recentes (Buscados da API GET /api/atendimentos)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -278,107 +303,83 @@ fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
                     fontWeight = FontWeight.Bold,
                     color = TextDark
                 )
-                TextTextButton(text = "Ver Todos") { }
+                TextTextButton(text = "Atualizar", onClick = onRefresh)
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // Cards estilo banner de atendimentos
-            val sampleAtendimentos = listOf(
-                RecentAttendance(
-                    nome = "Maria Silva",
-                    tag = "PRIMEIRA_VEZ",
-                    detalhe = "Rua das Flores, 123 - Centro",
-                    data = "07/11/2026",
-                    responsavel = "João"
-                ),
-                RecentAttendance(
-                    nome = "Carlos Oliveira",
-                    tag = "AFASTADO",
-                    detalhe = "Pedido de oração e acolhimento",
-                    data = "06/11/2026",
-                    responsavel = "Pr. André"
-                )
-            )
-
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(sampleAtendimentos) { item ->
-                    Card(
-                        onClick = onAttendanceClick,
+            when (uiState) {
+                HomeUiState.Loading -> {
+                    Box(
                         modifier = Modifier
-                            .width(280.dp)
-                            .wrapContentHeight(),
-                        shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(3.dp)
+                            .fillMaxWidth()
+                            .height(140.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        CircularProgressIndicator(
+                            color = AppColors.Primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+                is HomeUiState.Error -> {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = uiState.message,
+                            color = Color(0xFFC62828),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+                is HomeUiState.Success -> {
+                    val attendances = (uiState as HomeUiState.Success).attendances
+                        .filter { searchQuery.isBlank() || it.nome.contains(searchQuery, ignoreCase = true) || it.maiorProblema.contains(searchQuery, ignoreCase = true) }
+
+                    if (attendances.isEmpty()) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Surface(
-                                    color = LightBlue,
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = item.tag,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AppColors.Primary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
                                 Text(
-                                    text = item.data,
-                                    fontSize = 12.sp,
+                                    "Nenhum atendimento registrado.",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = TextMuted
                                 )
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            Text(
-                                text = item.nome,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextDark
-                            )
-
-                            Text(
-                                text = item.detalhe,
-                                fontSize = 13.sp,
-                                color = TextMuted
-                            )
-
-                            Spacer(Modifier.height(14.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Resp: ${item.responsavel}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = TextDark
-                                )
-
+                                Spacer(Modifier.height(8.dp))
                                 Button(
                                     onClick = onAttendanceClick,
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = AppColors.Primary
-                                    ),
-                                    shape = RoundedCornerShape(10.dp)
+                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
                                 ) {
-                                    Text("Acompanhar", fontSize = 12.sp)
+                                    Text("Cadastrar Atendimento", fontSize = 12.sp)
                                 }
+                            }
+                        }
+                    } else {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(attendances) { item ->
+                                AttendanceCard(
+                                    item = item,
+                                    onView = { onViewAttendance(item) },
+                                    onEdit = { onEditAttendance(item) }
+                                )
                             }
                         }
                     }
@@ -439,6 +440,106 @@ fun HomeScreenContent(onAttendanceClick: () -> Unit = {}) {
 }
 
 @Composable
+private fun AttendanceCard(
+    item: AttendanceItem,
+    onView: () -> Unit,
+    onEdit: () -> Unit
+) {
+    val mainTag = item.situacaoNaIgreja.firstOrNull() ?: "ATENDIMENTO"
+    val locationDetail = listOf(item.bairro, item.endereco).filter { it.isNotBlank() }.joinToString(" - ")
+        .ifEmpty { item.maiorProblema.ifEmpty { "Sem detalhes" } }
+
+    Card(
+        onClick = onView,
+        modifier = Modifier
+            .width(280.dp)
+            .wrapContentHeight(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(3.dp)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            if (item.fotoBase64.isNotBlank()) {
+                AttendancePhoto(
+                    photoBase64 = item.fotoBase64,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = LightBlue,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = mainTag,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.Primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                Text(
+                    text = item.dataAtendimento,
+                    fontSize = 12.sp,
+                    color = TextMuted
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = item.nome,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextDark
+            )
+
+            Text(
+                text = locationDetail,
+                fontSize = 13.sp,
+                color = TextMuted,
+                maxLines = 2
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (item.responsavelAcompanhamento.isNotBlank()) "Resp: ${item.responsavelAcompanhamento}" else "Pastor: ${item.vistoDoPastor}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextDark
+                )
+
+                TextButton(onClick = onView) {
+                    Text("Ver Ficha", fontSize = 12.sp)
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar ${item.nome}",
+                        tint = AppColors.Primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun TextTextButton(text: String, onClick: () -> Unit) {
     Text(
         text = text,
@@ -453,12 +554,4 @@ private data class CategoryItem(
     val title: String,
     val icon: ImageVector,
     val color: Color
-)
-
-private data class RecentAttendance(
-    val nome: String,
-    val tag: String,
-    val detalhe: String,
-    val data: String,
-    val responsavel: String
 )
