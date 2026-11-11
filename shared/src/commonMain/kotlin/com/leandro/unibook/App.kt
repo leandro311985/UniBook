@@ -4,75 +4,53 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
-import com.leandro.unibook.auth.presentation.SignUpUiState
-import com.leandro.unibook.auth.presentation.SignUpViewModel
-import com.leandro.unibook.auth.presentation.LoginViewModel
-import com.leandro.unibook.auth.presentation.LoginScreen
-import com.leandro.unibook.auth.presentation.SignUpScreen
+import com.leandro.unibook.attendance.FormScreen
+import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.home.AttendanceDetailsScreen
+import com.leandro.unibook.home.HomeScreen
 import org.koin.compose.KoinContext
-import org.koin.compose.viewmodel.koinViewModel
 
-enum class AuthScreenState {
-    LOGIN,
-    SIGN_UP
+enum class AppScreenState {
+    HOME,
+    FORM,
+    DETAILS
 }
 
 @Composable
 @Preview
 fun App() {
     KoinContext {
-        var currentScreen by remember { mutableStateOf(AuthScreenState.LOGIN) }
-        var successMessage by remember { mutableStateOf<String?>(null) }
+        var currentScreen by remember { mutableStateOf(AppScreenState.HOME) }
+        var selectedAttendance by remember { mutableStateOf<AttendanceItem?>(null) }
 
         MaterialTheme {
             Crossfade(targetState = currentScreen) { screen ->
                 when (screen) {
-                    AuthScreenState.LOGIN -> {
-                        val viewModel: LoginViewModel = koinViewModel()
-                        val uiState by viewModel.uiState.collectAsState()
-
-                        LoginScreen(
-                            uiState = uiState,
-                            successMessage = successMessage,
-                            onNavigateToSignUp = {
-                                successMessage = null
-                                viewModel.resetState()
-                                currentScreen = AuthScreenState.SIGN_UP
-                            },
-                            onLoginClick = { email, pass ->
-                                viewModel.onLogin(email, pass)
-                            }
-                        )
-                    }
-                    AuthScreenState.SIGN_UP -> {
-                        val viewModel: SignUpViewModel = koinViewModel()
-                        val uiState by viewModel.uiState.collectAsState()
-
-                        LaunchedEffect(uiState) {
-                            val state = uiState
-                            if (state is SignUpUiState.Success) {
-                                successMessage = state.message
-                                viewModel.resetState()
-                                currentScreen = AuthScreenState.LOGIN
-                            }
+                    AppScreenState.HOME -> HomeScreen(
+                        onAttendanceClick = {
+                            selectedAttendance = null
+                            currentScreen = AppScreenState.FORM
+                        },
+                        onViewAttendance = { attendance ->
+                            selectedAttendance = attendance
+                            currentScreen = AppScreenState.DETAILS
+                        },
+                        onEditAttendance = { attendance ->
+                            selectedAttendance = attendance
+                            currentScreen = AppScreenState.FORM
                         }
-
-                        SignUpScreen(
-                            uiState = uiState,
-                            onNavigateToLogin = {
-                                viewModel.resetState()
-                                currentScreen = AuthScreenState.LOGIN
-                            },
-                            onSignUpClick = { firstName, lastName, email, pass ->
-                                viewModel.onRegister(
-                                    nome = "$firstName $lastName".trim(),
-                                    email = email,
-                                    senha = pass,
-                                    confirmSenha = pass
-                                )
-                            }
+                    )
+                    AppScreenState.FORM -> FormScreen(
+                        attendance = selectedAttendance,
+                        onBack = { currentScreen = AppScreenState.HOME }
+                    )
+                    AppScreenState.DETAILS -> selectedAttendance?.let { attendance ->
+                        AttendanceDetailsScreen(
+                            attendance = attendance,
+                            onBack = { currentScreen = AppScreenState.HOME },
+                            onEdit = { currentScreen = AppScreenState.FORM }
                         )
-                    }
+                    } ?: HomeScreen()
                 }
             }
         }
