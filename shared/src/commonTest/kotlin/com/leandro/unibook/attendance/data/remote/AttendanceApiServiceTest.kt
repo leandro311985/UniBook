@@ -46,7 +46,7 @@ class AttendanceApiServiceTest {
         )
 
         try {
-            AttendanceApiService(client, "http://localhost:8082").create(request)
+            AttendanceApiService(client = client, baseUrl = "http://localhost:8082").create(request)
         } finally {
             client.close()
         }
@@ -85,7 +85,7 @@ class AttendanceApiServiceTest {
         }
 
         try {
-            AttendanceApiService(client, "http://localhost:8082").update(
+            AttendanceApiService(client = client, baseUrl = "http://localhost:8082").update(
                 id = "attendance-123",
                 request = AttendanceRequestDto(
                     nome = "Maria Silva",

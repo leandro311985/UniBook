@@ -96,40 +96,131 @@ fun AttendanceScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-    ) {
-        // HEADER
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+    Scaffold(
+        containerColor = Background,
+        topBar = {
+            Surface(
+                shadowElevation = 4.dp,
+                color = Color.White
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = Navy
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            if (attendance == null) "Novo Atendimento" else "Editar Atendimento",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+                        Text(
+                            "Ficha de acolhimento",
+                            color = Color.Gray,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
-            Column {
-                Text(
-                    if (attendance == null) "Atendimento" else "Editar atendimento",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Navy
-                )
-                Text(
-                    "Ficha de acolhimento pastoral",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
+        },
+        bottomBar = {
+            Surface(
+                shadowElevation = 8.dp,
+                color = Color.White
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    when (val state = uiState) {
+                        is AttendanceUiState.Error -> {
+                            Text(
+                                text = "⚠️ ${state.message}",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        AttendanceUiState.Success -> {
+                            Text(
+                                text = "✅ Atendimento salvo com sucesso!",
+                                color = Color(0xFF2E7D32),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        else -> Unit
+                    }
+
+                    Button(
+                        onClick = {
+                            onSave(
+                                AttendanceParams(
+                                    nome = name,
+                                    endereco = address,
+                                    bairro = neighborhood,
+                                    telefone = phone,
+                                    email = email,
+                                    situacaoNaIgreja = buildList {
+                                        if (firstVisit) add(ChurchSituation.PRIMEIRA_VEZ)
+                                        if (away) add(ChurchSituation.AFASTADO)
+                                        if (member) add(ChurchSituation.MEMBRO)
+                                    },
+                                    maiorProblema = mainProblem,
+                                    cultosAFrequentar = cultsToAttend,
+                                    responsavelAcompanhamento = responsiblePerson,
+                                    dataAtendimento = attendanceDate,
+                                    vistoDoPastor = pastorApproval,
+                                    fotoBase64 = photoBase64
+                                )
+                            )
+                        },
+                        enabled = uiState !is AttendanceUiState.Loading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Navy
+                        ),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        when (uiState) {
+                            AttendanceUiState.Loading -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text("Conectando e enviando...")
+                            }
+                            else -> Text(
+                                if (attendance == null) "Salvar atendimento" else "Salvar alterações",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
-
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .weight(1f)
+                .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
@@ -278,89 +369,6 @@ fun AttendanceScreen(
             }
 
             Spacer(Modifier.height(20.dp))
-        }
-
-        // BOTÃO SALVAR
-        Surface(
-            shadowElevation = 8.dp,
-            color = Color.White
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                // FEEDBACK ADICIONAL JUNTO AO BOTÃO
-                when (val state = uiState) {
-                    is AttendanceUiState.Error -> {
-                        Text(
-                            text = "⚠️ ${state.message}",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                    AttendanceUiState.Success -> {
-                        Text(
-                            text = "✅ Atendimento salvo com sucesso!",
-                            color = Color(0xFF2E7D32),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                    else -> Unit
-                }
-
-                Button(
-                    onClick = {
-                        onSave(
-                            AttendanceParams(
-                                nome = name,
-                                endereco = address,
-                                bairro = neighborhood,
-                                telefone = phone,
-                                email = email,
-                                situacaoNaIgreja = buildList {
-                                    if (firstVisit) add(ChurchSituation.PRIMEIRA_VEZ)
-                                    if (away) add(ChurchSituation.AFASTADO)
-                                    if (member) add(ChurchSituation.MEMBRO)
-                                },
-                                maiorProblema = mainProblem,
-                                cultosAFrequentar = cultsToAttend,
-                                responsavelAcompanhamento = responsiblePerson,
-                                dataAtendimento = attendanceDate,
-                                vistoDoPastor = pastorApproval,
-                                fotoBase64 = photoBase64
-                            )
-                        )
-                    },
-                    enabled = uiState !is AttendanceUiState.Loading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Navy
-                    ),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    when (uiState) {
-                        AttendanceUiState.Loading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text("Enviando...")
-                        }
-                        else -> Text(
-                            if (attendance == null) "Salvar atendimento" else "Salvar alterações",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
         }
     }
 }

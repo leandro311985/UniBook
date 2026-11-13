@@ -7,6 +7,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 actual fun decodePhotoBitmap(imageBytes: ByteArray): ImageBitmap? =
     try {
         BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
-    } catch (_: IllegalArgumentException) {
+    } catch (_: Exception) {
         null
     }

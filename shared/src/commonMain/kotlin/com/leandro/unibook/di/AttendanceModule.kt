@@ -10,6 +10,8 @@ import com.leandro.unibook.attendance.domain.usecase.UpdateAttendanceUseCase
 import com.leandro.unibook.attendance.presentation.AttendanceViewModel
 import com.leandro.unibook.home.presentation.HomeViewModel
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -25,10 +27,20 @@ val attendanceModule = module {
                     isLenient = true
                 })
             }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 90_000L // 90s para suportar cold-start do Render
+                connectTimeoutMillis = 90_000L
+                socketTimeoutMillis = 90_000L
+            }
+            install(HttpRequestRetry) {
+                maxRetries = 3
+                retryIf { _, response -> !response.status.value.let { it in 200..299 } }
+                exponentialDelay()
+            }
         }
     }
     single { AttendanceLocalDataSource() }
-    single { AttendanceApiService(client = get()) }
+    single { AttendanceApiService(client = get(), deviceIdProvider = getOrNull()) }
     single<AttendanceRepository> { AttendanceRepositoryImpl(apiService = get(), localDataSource = get()) }
     single { CreateAttendanceUseCase(repository = get()) }
     single { UpdateAttendanceUseCase(repository = get()) }
