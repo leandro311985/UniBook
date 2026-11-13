@@ -7,6 +7,6 @@ import org.jetbrains.skia.Image
 actual fun decodePhotoBitmap(imageBytes: ByteArray): ImageBitmap? =
     try {
         Image.makeFromEncoded(imageBytes).toComposeImageBitmap()
-    } catch (_: IllegalArgumentException) {
+    } catch (_: Exception) {
         null
     }

@@ -15,7 +15,7 @@ fun AttendancePhoto(
     modifier: Modifier = Modifier
 ) {
     val imageBitmap = remember(photoBase64) {
-        decodeBase64(photoBase64)?.let(::decodePhotoBitmap)
+        decodePhotoBytes(photoBase64)?.let(::decodePhotoBitmap)
     }
 
     if (imageBitmap != null) {
@@ -29,11 +29,27 @@ fun AttendancePhoto(
 }
 
 @OptIn(ExperimentalEncodingApi::class)
-private fun decodeBase64(photoBase64: String): ByteArray? =
-    try {
-        Base64.Default.decode(photoBase64)
+internal fun decodePhotoBytes(photoBase64: String): ByteArray? {
+    val value = photoBase64.trim()
+    val payload = if (value.startsWith("data:", ignoreCase = true)) {
+        val separator = value.indexOf(',')
+        if (separator < 0 || !value.substring(0, separator).contains(";base64", ignoreCase = true)) {
+            return null
+        }
+        value.substring(separator + 1)
+    } else {
+        value
+    }.filterNot(Char::isWhitespace)
+
+    return try {
+        if ('-' in payload || '_' in payload) {
+            Base64.UrlSafe.decode(payload)
+        } else {
+            Base64.Default.decode(payload)
+        }
     } catch (_: IllegalArgumentException) {
         null
     }
+}
 
 expect fun decodePhotoBitmap(imageBytes: ByteArray): ImageBitmap?
