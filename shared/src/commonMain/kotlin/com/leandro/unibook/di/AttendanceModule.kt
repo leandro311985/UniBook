@@ -46,5 +46,5 @@ val attendanceModule = module {
     single { UpdateAttendanceUseCase(repository = get()) }
     single { GetAttendancesUseCase(repository = get()) }
     factory { AttendanceViewModel(createAttendance = get(), updateAttendance = get()) }
-    factory { HomeViewModel(getAttendances = get()) }
+    factory { HomeViewModel(getAttendances = get(), churchSettingsRepository = getOrNull()) }
 }

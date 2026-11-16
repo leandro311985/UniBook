@@ -28,13 +28,15 @@ class AttendanceLocalDataSource {
         mutex.withLock {
             val current = _items.value.toMutableList()
             newEntities.forEach { remote ->
-                val localSyncedIndex = current.indexOfFirst { local ->
+                // Remove o item local temporário (local_) somente quando ele já foi marcado como SYNCED
+                val syncedLocalIndex = current.indexOfFirst { local ->
                     local.id.startsWith("local_") &&
                         local.syncStatus == SyncStatus.SYNCED &&
-                        local.copy(id = remote.id) == remote
+                        local.nome.trim().equals(remote.nome.trim(), ignoreCase = true) &&
+                        local.dataAtendimento == remote.dataAtendimento
                 }
-                if (localSyncedIndex >= 0) {
-                    current.removeAt(localSyncedIndex)
+                if (syncedLocalIndex >= 0) {
+                    current.removeAt(syncedLocalIndex)
                 }
 
                 val existingIndex = current.indexOfFirst { it.id == remote.id }

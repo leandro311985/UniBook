@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.koin.android)
     implementation(libs.koin.core)
+    implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)

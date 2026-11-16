@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.ui.AttendancePhoto
+import com.leandro.unibook.attendance.ui.CameraPhotoPicker
 import com.leandro.unibook.home.presentation.HomeUiState
 import com.leandro.unibook.home.presentation.HomeViewModel
 import com.leandro.unibook.ui.theme.AppColors
@@ -53,6 +54,9 @@ fun HomeScreen(
 
     HomeScreenContent(
         uiState = uiState,
+        churchName = viewModel.churchName,
+        churchPhotoBase64 = viewModel.churchPhotoBase64,
+        onSaveChurch = { name, photo -> viewModel.updateChurchProfile(name, photo) },
         onAttendanceClick = onAttendanceClick,
         onViewAttendance = onViewAttendance,
         onEditAttendance = onEditAttendance,
@@ -63,6 +67,9 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     uiState: HomeUiState = HomeUiState.Loading,
+    churchName: String = "Igreja Central - Sede",
+    churchPhotoBase64: String = "",
+    onSaveChurch: (name: String, photoBase64: String) -> Unit = { _, _ -> },
     onAttendanceClick: () -> Unit = {},
     onViewAttendance: (AttendanceItem) -> Unit = {},
     onEditAttendance: (AttendanceItem) -> Unit = {},
@@ -70,6 +77,84 @@ fun HomeScreenContent(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Estados para o modal de personalização da igreja
+    var showChurchModal by remember { mutableStateOf(false) }
+
+    // Modal de Personalização da Igreja
+    if (showChurchModal) {
+        var tempName by remember(churchName) { mutableStateOf(churchName) }
+        var tempPhoto by remember(churchPhotoBase64) { mutableStateOf(churchPhotoBase64) }
+
+        AlertDialog(
+            onDismissRequest = { showChurchModal = false },
+            title = {
+                Text(
+                    "Personalizar Sua Congregação",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = AppColors.Primary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        "Foto / Logo da Igreja:",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextDark
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    CameraPhotoPicker(
+                        photoBase64 = tempPhoto,
+                        onPhotoCaptured = { tempPhoto = it }
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        "Nome da Igreja / Congregação:",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextDark
+                    )
+                    Spacer(Modifier.height(6.dp))
+
+                    OutlinedTextField(
+                        value = tempName,
+                        onValueChange = { tempName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Ex: Igreja Batista Central") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val finalName = if (tempName.isNotBlank()) tempName.trim() else churchName
+                        onSaveChurch(finalName, tempPhoto)
+                        showChurchModal = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Salvar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChurchModal = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = Background,
@@ -117,7 +202,7 @@ fun HomeScreenContent(
                 .verticalScroll(rememberScrollState())
         ) {
 
-            // Top Bar (Notificação, Local da Igreja, Perfil do Servo)
+            // Top Bar (Notificação, Local da Igreja Personalizável, Perfil do Servo)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -141,10 +226,12 @@ fun HomeScreenContent(
                     }
                 }
 
+                // Nome da Congregação (Clicável para personalizar)
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 14.dp)
+                        .clickable { showChurchModal = true }
                 ) {
                     Text(
                         "Sua congregação",
@@ -153,11 +240,10 @@ fun HomeScreenContent(
                         fontWeight = FontWeight.Medium
                     )
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { }
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Igreja Central - Sede",
+                            churchName,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextDark
@@ -165,21 +251,30 @@ fun HomeScreenContent(
                         Spacer(Modifier.width(4.dp))
                         Icon(
                             Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
+                            contentDescription = "Personalizar igreja",
                             tint = TextDark,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
+                // Foto / Logo da Igreja (Clicável para personalizar)
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(AppColors.Primary),
+                        .background(AppColors.Primary)
+                        .clickable { showChurchModal = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✝", color = Gold, fontSize = 24.sp)
+                    if (churchPhotoBase64.isNotBlank()) {
+                        AttendancePhoto(
+                            photoBase64 = churchPhotoBase64,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text("✝", color = Gold, fontSize = 24.sp)
+                    }
                 }
             }
 
@@ -544,7 +639,7 @@ private fun TextTextButton(text: String, onClick: () -> Unit) {
     Text(
         text = text,
         fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         color = AppColors.Primary,
         modifier = Modifier.clickable { onClick() }
     )
