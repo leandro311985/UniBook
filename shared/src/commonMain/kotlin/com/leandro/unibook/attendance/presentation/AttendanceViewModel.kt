@@ -19,6 +19,10 @@ class AttendanceViewModel(
     private val _uiState = MutableStateFlow<AttendanceUiState>(AttendanceUiState.Idle)
     val uiState: StateFlow<AttendanceUiState> = _uiState.asStateFlow()
 
+    fun resetState() {
+        _uiState.value = AttendanceUiState.Idle
+    }
+
     fun save(params: AttendanceParams, attendanceId: String? = null) {
         if (_uiState.value is AttendanceUiState.Loading) return
 

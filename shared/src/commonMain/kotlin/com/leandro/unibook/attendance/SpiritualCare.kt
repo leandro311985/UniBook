@@ -39,11 +39,19 @@ fun FormScreen(
     val viewModel: AttendanceViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
+    // Reseta o ViewModel ao entrar na tela
+    LaunchedEffect(attendance) {
+        viewModel.resetState()
+    }
+
     AttendanceScreen(
         attendance = attendance,
         uiState = uiState,
         onSave = { params -> viewModel.save(params, attendance?.id) },
-        onBack = onBack
+        onBack = {
+            viewModel.resetState()
+            onBack()
+        }
     )
 }
 
@@ -54,36 +62,36 @@ fun AttendanceScreen(
     onSave: (AttendanceParams) -> Unit,
     onBack: () -> Unit = {}
 ) {
-    var photoBase64 by remember(attendance?.id) { mutableStateOf(attendance?.fotoBase64.orEmpty()) }
-    var name by remember(attendance?.id) { mutableStateOf(attendance?.nome.orEmpty()) }
-    var address by remember(attendance?.id) { mutableStateOf(attendance?.endereco.orEmpty()) }
-    var neighborhood by remember(attendance?.id) { mutableStateOf(attendance?.bairro.orEmpty()) }
-    var phone by remember(attendance?.id) { mutableStateOf(attendance?.telefone.orEmpty()) }
-    var email by remember(attendance?.id) { mutableStateOf(attendance?.email.orEmpty()) }
+    var photoBase64 by remember(attendance) { mutableStateOf(attendance?.fotoBase64.orEmpty()) }
+    var name by remember(attendance) { mutableStateOf(attendance?.nome.orEmpty()) }
+    var address by remember(attendance) { mutableStateOf(attendance?.endereco.orEmpty()) }
+    var neighborhood by remember(attendance) { mutableStateOf(attendance?.bairro.orEmpty()) }
+    var phone by remember(attendance) { mutableStateOf(attendance?.telefone.orEmpty()) }
+    var email by remember(attendance) { mutableStateOf(attendance?.email.orEmpty()) }
 
-    var firstVisit by remember(attendance?.id) {
+    var firstVisit by remember(attendance) {
         mutableStateOf("PRIMEIRA_VEZ" in attendance?.situacaoNaIgreja.orEmpty())
     }
-    var away by remember(attendance?.id) {
+    var away by remember(attendance) {
         mutableStateOf("AFASTADO" in attendance?.situacaoNaIgreja.orEmpty())
     }
-    var member by remember(attendance?.id) {
+    var member by remember(attendance) {
         mutableStateOf("MEMBRO" in attendance?.situacaoNaIgreja.orEmpty())
     }
 
-    var mainProblem by remember(attendance?.id) {
+    var mainProblem by remember(attendance) {
         mutableStateOf(attendance?.maiorProblema.orEmpty())
     }
-    var cultsToAttend by remember(attendance?.id) {
+    var cultsToAttend by remember(attendance) {
         mutableStateOf(attendance?.cultosAFrequentar.orEmpty())
     }
-    var responsiblePerson by remember(attendance?.id) {
+    var responsiblePerson by remember(attendance) {
         mutableStateOf(attendance?.responsavelAcompanhamento.orEmpty())
     }
-    var attendanceDate by remember(attendance?.id) {
+    var attendanceDate by remember(attendance) {
         mutableStateOf(attendance?.dataAtendimento ?: "2026-11-07")
     }
-    var pastorApproval by remember(attendance?.id) {
+    var pastorApproval by remember(attendance) {
         mutableStateOf(attendance?.vistoDoPastor ?: "Pendente")
     }
 
@@ -93,6 +101,26 @@ fun AttendanceScreen(
     LaunchedEffect(uiState) {
         if (uiState is AttendanceUiState.Error || uiState is AttendanceUiState.Success) {
             scrollState.animateScrollTo(0)
+        }
+    }
+
+    // Se o formulário foi salvo com sucesso num novo cadastro, limpa os campos para o próximo
+    LaunchedEffect(uiState) {
+        if (uiState is AttendanceUiState.Success && attendance == null) {
+            photoBase64 = ""
+            name = ""
+            address = ""
+            neighborhood = ""
+            phone = ""
+            email = ""
+            firstVisit = false
+            away = false
+            member = false
+            mainProblem = ""
+            cultsToAttend = ""
+            responsiblePerson = ""
+            attendanceDate = "2026-11-07"
+            pastorApproval = "Pendente"
         }
     }
 
