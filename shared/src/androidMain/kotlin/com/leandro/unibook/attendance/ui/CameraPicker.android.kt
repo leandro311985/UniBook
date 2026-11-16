@@ -37,17 +37,17 @@ actual fun CameraPhotoPicker(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            val base64 = bitmap.toBase64String()
+            val base64 = bitmap.toScaledBase64String()
             onPhotoCaptured(base64)
         }
     }
 
     val imageBitmap = remember(photoBase64) {
-        if (photoBase64.isNotEmpty()) {
-            try {
-                val decodedBytes = Base64.decode(photoBase64, Base64.NO_WRAP)
-                BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)?.asImageBitmap()
-            } catch (e: Exception) {
+        if (photoBase64.isNotBlank()) {
+            val bytes = decodePhotoBytes(photoBase64)
+            if (bytes != null) {
+                decodePhotoBitmap(bytes)
+            } else {
                 null
             }
         } else {
@@ -127,9 +127,22 @@ actual fun CameraPhotoPicker(
     }
 }
 
-private fun Bitmap.toBase64String(): String {
+private fun Bitmap.toScaledBase64String(): String {
+    val maxDimension = 500
+    val scaledBitmap = if (width > maxDimension || height > maxDimension) {
+        val aspect = width.toFloat() / height.toFloat()
+        val (newW, newH) = if (width >= height) {
+            maxDimension to (maxDimension / aspect).toInt()
+        } else {
+            (maxDimension * aspect).toInt() to maxDimension
+        }
+        Bitmap.createScaledBitmap(this, newW, newH, true)
+    } else {
+        this
+    }
+
     val outputStream = ByteArrayOutputStream()
-    compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 65, outputStream)
     val byteArray = outputStream.toByteArray()
     return Base64.encodeToString(byteArray, Base64.NO_WRAP)
 }

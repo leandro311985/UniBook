@@ -9,6 +9,7 @@ import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.domain.model.AttendanceParams
 import com.leandro.unibook.attendance.domain.model.AttendanceResult
 import com.leandro.unibook.attendance.domain.repository.AttendanceRepository
+import com.leandro.unibook.attendance.ui.decodePhotoBytes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -137,9 +138,19 @@ class AttendanceRepositoryImpl(
 
         for (item in pending) {
             try {
-                apiService.create(
-                    request = item.toRequestDto()
-                )
+                val dto = item.toRequestDto()
+                val photoBytes = decodePhotoBytes(item.fotoBase64)
+
+                try {
+                    apiService.createMultipart(
+                        request = dto,
+                        fotoBytes = photoBytes
+                    )
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    apiService.create(request = dto)
+                }
+
                 localDataSource.markAsSynced(item.id)
                 syncedCount++
             } catch (e: CancellationException) {

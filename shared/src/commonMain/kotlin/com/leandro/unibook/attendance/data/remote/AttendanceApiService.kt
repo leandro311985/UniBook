@@ -5,12 +5,16 @@ import com.leandro.unibook.attendance.data.remote.dto.AttendanceResponseDto
 import com.leandro.unibook.core.device.DeviceIdProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 
 class AttendanceApiService(
@@ -22,6 +26,39 @@ class AttendanceApiService(
         return overrideId.takeUnless { it.isNullOrBlank() }
             ?: deviceIdProvider?.getDeviceId()
             ?: "123e4567-e89b-12d3-a456-426614174000"
+    }
+
+    suspend fun createMultipart(
+        request: AttendanceRequestDto,
+        fotoBytes: ByteArray? = null,
+        deviceId: String? = null
+    ) {
+        val activeDeviceId = resolveDeviceId(deviceId)
+        client.submitFormWithBinaryData(
+            url = "$baseUrl/api/atendimentos",
+            formData = formData {
+                append("nome", request.nome)
+                request.endereco?.let { append("endereco", it) }
+                request.bairro?.let { append("bairro", it) }
+                append("telefone", request.telefone)
+                request.email?.let { append("email", it) }
+                request.situacaoNaIgreja.forEach { append("situacaoNaIgreja", it) }
+                append("maiorProblema", request.maiorProblema)
+                request.cultosAFrequentar?.let { append("cultosAFrequentar", it) }
+                request.responsavelAcompanhamento?.let { append("responsavelAcompanhamento", it) }
+                append("dataAtendimento", request.dataAtendimento)
+                request.vistoDoPastor?.let { append("vistoDoPastor", it) }
+
+                if (fotoBytes != null && fotoBytes.isNotEmpty()) {
+                    append("foto", fotoBytes, Headers.build {
+                        append(HttpHeaders.ContentType, "image/jpeg")
+                        append(HttpHeaders.ContentDisposition, "filename=\"foto.jpg\"")
+                    })
+                }
+            }
+        ) {
+            header("X-Device-Id", activeDeviceId)
+        }
     }
 
     suspend fun create(
