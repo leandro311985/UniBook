@@ -1,4 +1,4 @@
-package com.leandro.unibook.attendance.ui
+package com.leandro.unibook.attendance.presentation.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

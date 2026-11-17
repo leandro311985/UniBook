@@ -29,6 +29,20 @@ class AttendanceLocalDataSourceTest {
         assertEquals(setOf(pending, remote), dataSource.getAll().toSet())
     }
 
+    @Test
+    fun saveAllPreservesLocalPhotoWhenRemoteReturnsEmptyPhoto() = runTest {
+        val dataSource = AttendanceLocalDataSource()
+        val local = attendance(id = "local_123", syncStatus = SyncStatus.SYNCED).copy(fotoBase64 = "dGVzdA==")
+        val remoteWithoutPhoto = local.copy(id = "server-123", fotoBase64 = "")
+
+        dataSource.save(local)
+        dataSource.saveAll(listOf(remoteWithoutPhoto))
+
+        val result = dataSource.getAll()
+        assertEquals(1, result.size)
+        assertEquals("dGVzdA==", result.first().fotoBase64)
+    }
+
     private fun attendance(id: String, syncStatus: SyncStatus) = AttendanceEntity(
         id = id,
         nome = "Maria Silva",

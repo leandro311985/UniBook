@@ -16,5 +16,10 @@ data class AttendanceResponseDto(
     val responsavelAcompanhamento: String? = null,
     val dataAtendimento: String = "",
     val vistoDoPastor: String? = "Pendente",
-    val fotoBase64: String? = null
-)
+    val fotoBase64: String? = null,
+    val foto: String? = null,
+    val fotoUrl: String? = null
+) {
+    val effectiveFotoBase64: String
+        get() = fotoBase64 ?: foto ?: fotoUrl ?: ""
+}

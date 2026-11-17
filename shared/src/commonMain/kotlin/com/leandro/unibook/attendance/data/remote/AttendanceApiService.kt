@@ -2,6 +2,7 @@ package com.leandro.unibook.attendance.data.remote
 
 import com.leandro.unibook.attendance.data.remote.dto.AttendanceRequestDto
 import com.leandro.unibook.attendance.data.remote.dto.AttendanceResponseDto
+import com.leandro.unibook.attendance.data.remote.dto.ReminderResponseDto
 import com.leandro.unibook.core.device.DeviceIdProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -49,6 +50,11 @@ class AttendanceApiService(
                 append("dataAtendimento", request.dataAtendimento)
                 request.vistoDoPastor?.let { append("vistoDoPastor", it) }
 
+                request.fotoBase64?.let {
+                    append("fotoBase64", it)
+                    append("foto", it)
+                }
+
                 if (fotoBytes != null && fotoBytes.isNotEmpty()) {
                     append("foto", fotoBytes, Headers.build {
                         append(HttpHeaders.ContentType, "image/jpeg")
@@ -93,5 +99,24 @@ class AttendanceApiService(
         return client.get("$baseUrl/api/atendimentos") {
             header("X-Device-Id", activeDeviceId)
         }.body()
+    }
+
+    suspend fun getReminders(
+        deviceId: String? = null
+    ): List<ReminderResponseDto> {
+        val activeDeviceId = resolveDeviceId(deviceId)
+        return client.get("$baseUrl/api/atendimentos/lembretes") {
+            header("X-Device-Id", activeDeviceId)
+        }.body()
+    }
+
+    suspend fun confirmReminder(
+        id: String,
+        deviceId: String? = null
+    ) {
+        val activeDeviceId = resolveDeviceId(deviceId)
+        client.post("$baseUrl/api/atendimentos/$id/lembrete/concluir") {
+            header("X-Device-Id", activeDeviceId)
+        }
     }
 }

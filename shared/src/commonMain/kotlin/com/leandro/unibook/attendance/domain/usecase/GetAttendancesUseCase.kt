@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 class GetAttendancesUseCase(
     private val repository: AttendanceRepository
 ) {
-    suspend operator fun invoke(): List<AttendanceItem> {
-        return repository.getAll()
+    suspend operator fun invoke(forceFetch: Boolean = false): List<AttendanceItem> {
+        return repository.getAll(forceFetch)
     }
 
     fun observe(): Flow<List<AttendanceItem>> {

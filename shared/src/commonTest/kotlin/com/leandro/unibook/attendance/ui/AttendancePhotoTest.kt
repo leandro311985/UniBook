@@ -1,5 +1,6 @@
 package com.leandro.unibook.attendance.ui
 
+import com.leandro.unibook.attendance.presentation.ui.decodePhotoBytes
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
@@ -12,7 +13,7 @@ class AttendancePhotoTest {
     fun decodesPlainBase64() {
         val expected = byteArrayOf(0x01, 0x02, 0x03)
 
-        assertContentEquals(expected, decodePhotoBytes(Base64.Default.encode(expected)))
+        assertContentEquals(expected, decodePhotoBytes(Base64.encode(expected)))
     }
 
     @Test

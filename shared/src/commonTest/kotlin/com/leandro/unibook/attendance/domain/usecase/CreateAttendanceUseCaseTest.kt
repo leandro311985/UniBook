@@ -85,5 +85,8 @@ class CreateAttendanceUseCaseTest {
         override suspend fun syncPending(): Int {
             return 0
         }
+
+        override suspend fun confirmReminder(id: String) {
+        }
     }
 }

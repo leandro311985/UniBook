@@ -1,31 +1,117 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# UniBook
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Aplicativo multiplataforma para registrar e acompanhar atendimentos pastorais. A interface e a maior parte da lógica são compartilhadas entre Android e iOS usando Kotlin Multiplatform e Compose Multiplatform.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## Estado atual
 
-### Running the apps
+- O app tem três áreas principais: lista de atendimentos, cadastro/edição e detalhes.
+- Os atendimentos são gravados localmente primeiro. A sincronização com a API é tentada em seguida; itens que não sincronizam permanecem pendentes para novas tentativas.
+- Os dados locais são persistidos como JSON nas preferências da plataforma: `SharedPreferences` no Android e `NSUserDefaults` no iOS. Não há banco de dados SQL neste momento.
+- A data inicial do cadastro e o atalho **Hoje** usam a data local do dispositivo. Ao editar, a data existente é mantida.
+- O agendamento de notificações de lembrete está implementado no Android com WorkManager. O código iOS atual não possui um fluxo equivalente de notificações.
+- A API está configurada no código para `https://unibookback.onrender.com`.
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+## Tecnologias
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+- Kotlin Multiplatform e Compose Multiplatform
+- Kotlin Coroutines e StateFlow
+- Ktor Client com serialização kotlinx
+- Koin para injeção de dependências
+- WorkManager e notificações locais no Android
+- SwiftUI como ponto de entrada do app iOS, hospedando a interface compartilhada
 
-### Running tests
+As versões dos plugins e bibliotecas ficam em `gradle/libs.versions.toml`.
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+## Requisitos para desenvolvimento
 
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+- JDK 21
+- Android SDK com a plataforma indicada por `android-compileSdk` em `gradle/libs.versions.toml` (atualmente API 37)
+- Xcode para compilar e executar o app iOS
 
----
+O projeto inclui o Gradle Wrapper, portanto não é necessário instalar Gradle globalmente. No macOS/Linux, use `./gradlew`; no Windows, use `gradlew.bat`.
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## Executar e validar
+
+```bash
+# Compilar o app Android
+./gradlew :androidApp:assembleDebug
+
+# Compilar as fontes compartilhadas para Android
+./gradlew :shared:compileAndroidMain
+
+# Executar os testes compartilhados na JVM do host Android
+./gradlew :shared:testAndroidHostTest
+```
+
+Para iOS, abra `iosApp/iosApp.xcodeproj` no Xcode e execute o scheme `iosApp` em um simulador ou dispositivo compatível.
+
+O workflow de CI em `.github/workflows/ci.yml` executa `:shared:testAndroidHostTest` e `:androidApp:assembleDebug`.
+
+## Estrutura do repositório
+
+```text
+androidApp/                  Aplicativo Android e integração com WorkManager/notificações
+iosApp/                      Projeto Xcode e entry point SwiftUI
+shared/src/commonMain/       UI, domínio, dados e lógica compartilhada
+shared/src/androidMain/      Implementações específicas do Android
+shared/src/iosMain/          Implementações específicas do iOS
+shared/src/commonTest/       Testes compartilhados
+gradle/libs.versions.toml    Catálogo de versões e dependências
+```
+
+### Fluxo principal
+
+`App.kt` controla a navegação entre lista, formulário e detalhes. As telas principais ficam em `attendance/SpiritualCare.kt` e `home/`. A implementação de atendimentos segue este fluxo:
+
+```text
+Compose UI
+  -> AttendanceViewModel
+  -> use cases (Create / Update / Get)
+  -> AttendanceRepository
+  -> API Ktor e armazenamento local
+```
+
+Os bindings de dependência estão em `di/AttendanceModule.kt` e `di/DeviceModule.kt`; cada plataforma fornece suas implementações `actual`.
+
+### Pastas importantes
+
+- `attendance/domain/`: modelos, contrato do repositório e casos de uso.
+- `attendance/presentation/`: estado e ViewModel do formulário.
+- `attendance/data/remote/`: cliente da API, configuração da URL e DTOs.
+- `attendance/data/local/`: cache, estado local e interface de persistência.
+- `home/`: lista, detalhes e configurações do perfil da igreja.
+- `core/device/`: identificador do dispositivo enviado à API.
+
+## Persistência e sincronização
+
+`AttendanceLocalDataSource` mantém a lista em `StateFlow` e persiste os registros serializados por `AttendanceStorageRepository`. As implementações de plataforma estão em:
+
+- Android: `shared/src/androidMain/.../AndroidAttendanceStorageRepository.kt`
+- iOS: `shared/src/iosMain/.../IosAttendanceStorageRepository.kt`
+
+O `AttendanceRepositoryImpl` salva novos registros com estado `PENDING_SYNC` antes de tentar enviá-los. A lista observa o estado local e pode ser exibida sem rede. A busca remota usa cache em memória por até cinco minutos; a sincronização pendente pode ocorrer ao buscar novamente.
+
+## API
+
+A URL base atual está em `AttendanceApiConfig.android.kt` e `AttendanceApiConfig.ios.kt`. `AttendanceApiService` envia o identificador do dispositivo no cabeçalho `X-Device-Id` e usa estas rotas:
+
+| Operação | Rota |
+|---|---|
+| Listar atendimentos | `GET /api/atendimentos` |
+| Criar atendimento | `POST /api/atendimentos` |
+| Editar atendimento | `PUT /api/atendimentos/{id}` |
+| Buscar lembretes | `GET /api/atendimentos/lembretes` |
+| Confirmar lembrete | `POST /api/atendimentos/{id}/lembrete/concluir` |
+
+O envio de um atendimento com foto tenta multipart; o caminho JSON também está disponível. O formato esperado para `dataAtendimento` é `AAAA-MM-DD`.
+
+## Lembretes no Android
+
+`MainActivity` agenda o trabalho periódico em `ReminderScheduler`. O `ReminderWorker` consulta os lembretes quando há conexão e enfileira notificações com atraso; `DelayedNotificationWorker` publica a notificação local. As implementações estão em `androidApp/src/main/kotlin/com/leandro/unibook/worker/`.
+
+## Observações para quem está chegando
+
+- Ao adicionar uma API específica de plataforma, mantenha o `expect` em `commonMain` e os `actual` nos source sets de cada plataforma, no mesmo package.
+- Prefira adicionar novos valores de versão e bibliotecas ao catálogo `gradle/libs.versions.toml`.
+- A URL do backend está atualmente definida nos arquivos Kotlin por plataforma; não há configuração de ambiente separada no projeto.
+- O workflow CI instala Android SDK API 35/build-tools 35.0.0, enquanto o catálogo do projeto declara `compileSdk` API 37. Se a compilação no CI começar a falhar por falta da plataforma 37, alinhe a instalação do workflow com `android-compileSdk`.

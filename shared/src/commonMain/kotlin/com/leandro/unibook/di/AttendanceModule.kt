@@ -39,12 +39,12 @@ val attendanceModule = module {
             }
         }
     }
-    single { AttendanceLocalDataSource() }
+    single { AttendanceLocalDataSource(storageRepository = getOrNull()) }
     single { AttendanceApiService(client = get(), deviceIdProvider = getOrNull()) }
     single<AttendanceRepository> { AttendanceRepositoryImpl(apiService = get(), localDataSource = get()) }
     single { CreateAttendanceUseCase(repository = get()) }
     single { UpdateAttendanceUseCase(repository = get()) }
     single { GetAttendancesUseCase(repository = get()) }
     factory { AttendanceViewModel(createAttendance = get(), updateAttendance = get()) }
-    factory { HomeViewModel(getAttendances = get()) }
+    factory { HomeViewModel(getAttendances = get(), churchSettingsRepository = getOrNull()) }
 }
