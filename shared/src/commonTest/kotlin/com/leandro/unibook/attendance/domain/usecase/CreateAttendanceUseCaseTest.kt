@@ -74,7 +74,7 @@ class CreateAttendanceUseCaseTest {
             return AttendanceResult.Success
         }
 
-        override suspend fun getAll(): List<AttendanceItem> {
+        override suspend fun getAll(forceFetch: Boolean): List<AttendanceItem> {
             return emptyList()
         }
 
