@@ -1,4 +1,4 @@
-package com.leandro.unibook.attendance.ui
+package com.leandro.unibook.attendance.presentation.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -52,7 +52,6 @@ fun AttendancePhoto(
     }
 }
 
-@OptIn(ExperimentalEncodingApi::class)
 internal fun decodePhotoBytes(photoBase64: String): ByteArray? {
     val value = photoBase64.trim()
     val payload = if (value.startsWith("data:", ignoreCase = true)) {
@@ -69,7 +68,7 @@ internal fun decodePhotoBytes(photoBase64: String): ByteArray? {
         if ('-' in payload || '_' in payload) {
             Base64.UrlSafe.decode(payload)
         } else {
-            Base64.Default.decode(payload)
+            Base64.decode(payload)
         }
     } catch (_: Exception) {
         null

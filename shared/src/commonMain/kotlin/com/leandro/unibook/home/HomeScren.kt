@@ -22,11 +22,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
-import com.leandro.unibook.attendance.ui.AttendancePhoto
-import com.leandro.unibook.attendance.ui.CameraPhotoPicker
+import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
+import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
 import com.leandro.unibook.home.presentation.HomeUiState
 import com.leandro.unibook.home.presentation.HomeViewModel
 import com.leandro.unibook.ui.theme.AppColors
@@ -434,7 +435,7 @@ fun HomeScreenContent(
                     }
                 }
                 is HomeUiState.Success -> {
-                    val attendances = (uiState as HomeUiState.Success).attendances
+                    val attendances = (uiState).attendances
                         .filter { searchQuery.isBlank() || it.nome.contains(searchQuery, ignoreCase = true) || it.maiorProblema.contains(searchQuery, ignoreCase = true) }
 
                     if (attendances.isEmpty()) {
@@ -563,6 +564,17 @@ private fun AttendanceCard(
                         .clip(RoundedCornerShape(14.dp))
                 )
                 Spacer(Modifier.height(12.dp))
+            }else{
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Foto da Pessoa",
+                    tint = PaperBlue.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                )
+                Spacer(Modifier.height(12.dp))
+
             }
 
             Row(
@@ -632,6 +644,13 @@ private fun AttendanceCard(
             }
         }
     }
+}
+
+
+@Composable
+@Preview(showBackground = true)
+fun HomePreviewTest(){
+    HomeScreenContent()
 }
 
 @Composable

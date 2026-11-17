@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 interface AttendanceRepository {
     suspend fun create(params: AttendanceParams): AttendanceResult
     suspend fun update(id: String, params: AttendanceParams): AttendanceResult
-    suspend fun getAll(): List<AttendanceItem>
+    suspend fun getAll(forceFetch: Boolean = false): List<AttendanceItem>
     fun observeAll(): Flow<List<AttendanceItem>>
     suspend fun syncPending(): Int
+    suspend fun confirmReminder(id: String)
 }

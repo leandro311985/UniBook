@@ -39,7 +39,7 @@ val attendanceModule = module {
             }
         }
     }
-    single { AttendanceLocalDataSource() }
+    single { AttendanceLocalDataSource(storageRepository = getOrNull()) }
     single { AttendanceApiService(client = get(), deviceIdProvider = getOrNull()) }
     single<AttendanceRepository> { AttendanceRepositoryImpl(apiService = get(), localDataSource = get()) }
     single { CreateAttendanceUseCase(repository = get()) }

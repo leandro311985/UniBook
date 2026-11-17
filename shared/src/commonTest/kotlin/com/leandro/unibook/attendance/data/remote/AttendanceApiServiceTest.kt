@@ -42,7 +42,8 @@ class AttendanceApiServiceTest {
             situacaoNaIgreja = listOf("PRIMEIRA_VEZ"),
             maiorProblema = "Está passando por dificuldades",
             dataAtendimento = "2026-11-07",
-            fotoBase64 = "dGVzdA=="
+            fotoBase64 = "dGVzdA==",
+            foto = "dGVzdA=="
         )
 
         try {
@@ -61,7 +62,7 @@ class AttendanceApiServiceTest {
             sentBody.contentType.toString()
         )
         assertEquals(
-            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente","fotoBase64":"dGVzdA=="}""",
+            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente","fotoBase64":"dGVzdA==","foto":"dGVzdA=="}""",
             sentBody.text
         )
     }
@@ -102,6 +103,33 @@ class AttendanceApiServiceTest {
         val sentRequest = assertNotNull(capturedRequest)
         assertEquals(HttpMethod.Put, sentRequest.method)
         assertEquals("/api/atendimentos/attendance-123", sentRequest.url.encodedPath)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", sentRequest.headers["X-Device-Id"])
+    }
+
+    @Test
+    fun confirmReminderPostsToConcluirEndpoint() = runTest {
+        var capturedRequest: HttpRequestData? = null
+        val client = HttpClient(
+            MockEngine { request ->
+                capturedRequest = request
+                respond(
+                    content = "",
+                    status = HttpStatusCode.NoContent
+                )
+            }
+        )
+
+        try {
+            AttendanceApiService(client = client, baseUrl = "http://localhost:8082").confirmReminder(
+                id = "6afc6a945c1f29f249606484"
+            )
+        } finally {
+            client.close()
+        }
+
+        val sentRequest = assertNotNull(capturedRequest)
+        assertEquals(HttpMethod.Post, sentRequest.method)
+        assertEquals("/api/atendimentos/6afc6a945c1f29f249606484/lembrete/concluir", sentRequest.url.encodedPath)
         assertEquals("123e4567-e89b-12d3-a456-426614174000", sentRequest.headers["X-Device-Id"])
     }
 }

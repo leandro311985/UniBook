@@ -49,10 +49,10 @@ class HomeViewModel(
         }
     }
 
-    fun loadAttendances() {
+    fun loadAttendances(forceFetch: Boolean = false) {
         viewModelScope.launch {
             try {
-                getAttendances()
+                getAttendances(forceFetch)
             } catch (e: Exception) {
                 // Erro de rede tratado graciosamente exibindo dados locais salvos
             }

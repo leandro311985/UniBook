@@ -29,10 +29,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
-import com.leandro.unibook.attendance.ui.AttendancePhoto
+import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
 import com.leandro.unibook.ui.theme.AppColors
 
-private val PaperBlue = Color(0xFF0F2B5B)
+val PaperBlue = Color(0xFF0F2B5B)
 private val LineBlue = Color(0xFF7B93B8)
 private val TextDark = Color(0xFF1E293B)
 private val PaperBg = Color(0xFFFFFFFF)

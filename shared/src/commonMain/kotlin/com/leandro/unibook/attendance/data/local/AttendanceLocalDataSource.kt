@@ -5,11 +5,37 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.Json
 
-class AttendanceLocalDataSource {
+class AttendanceLocalDataSource(
+    private val storageRepository: AttendanceStorageRepository? = null
+) {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
     private val mutex = Mutex()
-    private val _items = MutableStateFlow<List<AttendanceEntity>>(emptyList())
+    private val _items = MutableStateFlow<List<AttendanceEntity>>(loadInitialItems())
     val items: StateFlow<List<AttendanceEntity>> = _items.asStateFlow()
+
+    private fun loadInitialItems(): List<AttendanceEntity> {
+        val rawJson = storageRepository?.getSavedAttendancesJson() ?: return emptyList()
+        return try {
+            json.decodeFromString<List<AttendanceEntity>>(rawJson)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun persistItemsLocked() {
+        storageRepository?.let { repo ->
+            try {
+                val encoded = json.encodeToString(_items.value)
+                repo.saveAttendancesJson(encoded)
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     suspend fun save(entity: AttendanceEntity) {
         mutex.withLock {
@@ -21,13 +47,15 @@ class AttendanceLocalDataSource {
                 current.add(0, entity)
             }
             _items.value = current
+            persistItemsLocked()
         }
     }
 
     suspend fun saveAll(newEntities: List<AttendanceEntity>) {
         mutex.withLock {
             val current = _items.value.toMutableList()
-            newEntities.forEach { remote ->
+            newEntities.forEach { remoteInput ->
+                var remote = remoteInput
                 // Remove o item local temporário (local_) somente quando ele já foi marcado como SYNCED
                 val syncedLocalIndex = current.indexOfFirst { local ->
                     local.id.startsWith("local_") &&
@@ -36,19 +64,29 @@ class AttendanceLocalDataSource {
                         local.dataAtendimento == remote.dataAtendimento
                 }
                 if (syncedLocalIndex >= 0) {
-                    current.removeAt(syncedLocalIndex)
+                    val localItem = current.removeAt(syncedLocalIndex)
+                    if (remote.fotoBase64.isBlank() && localItem.fotoBase64.isNotBlank()) {
+                        remote = remote.copy(fotoBase64 = localItem.fotoBase64)
+                    }
                 }
 
                 val existingIndex = current.indexOfFirst { it.id == remote.id }
                 if (existingIndex >= 0) {
-                    if (current[existingIndex].syncStatus != SyncStatus.PENDING_SYNC) {
-                        current[existingIndex] = remote
+                    val existing = current[existingIndex]
+                    if (existing.syncStatus != SyncStatus.PENDING_SYNC) {
+                        val mergedPhoto = if (remote.fotoBase64.isBlank() && existing.fotoBase64.isNotBlank()) {
+                            existing.fotoBase64
+                        } else {
+                            remote.fotoBase64
+                        }
+                        current[existingIndex] = remote.copy(fotoBase64 = mergedPhoto)
                     }
                 } else {
                     current.add(remote)
                 }
             }
             _items.value = current.sortedByDescending { it.dataAtendimento }
+            persistItemsLocked()
         }
     }
 
@@ -58,6 +96,7 @@ class AttendanceLocalDataSource {
                 if (item.id == id) item.copy(syncStatus = SyncStatus.SYNCED) else item
             }
             _items.value = current
+            persistItemsLocked()
         }
     }
 
@@ -66,6 +105,7 @@ class AttendanceLocalDataSource {
             _items.value = _items.value.map { current ->
                 if (current.id == entity.id) entity else current
             }
+            persistItemsLocked()
         }
     }
 

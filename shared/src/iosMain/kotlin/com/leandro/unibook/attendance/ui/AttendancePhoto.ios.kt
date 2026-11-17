@@ -1,4 +1,4 @@
-package com.leandro.unibook.attendance.ui
+package com.leandro.unibook.attendance.presentation.ui
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap

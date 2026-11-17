@@ -15,5 +15,6 @@ data class AttendanceRequestDto(
     val responsavelAcompanhamento: String? = null,
     val dataAtendimento: String,
     val vistoDoPastor: String? = "Pendente",
-    val fotoBase64: String? = null
+    val fotoBase64: String? = null,
+    val foto: String? = null
 )

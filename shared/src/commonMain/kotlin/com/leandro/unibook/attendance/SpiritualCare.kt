@@ -1,7 +1,6 @@
 package com.leandro.unibook.attendance
 
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,7 +23,10 @@ import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.domain.model.ChurchSituation
 import com.leandro.unibook.attendance.presentation.AttendanceUiState
 import com.leandro.unibook.attendance.presentation.AttendanceViewModel
-import com.leandro.unibook.attendance.ui.CameraPhotoPicker
+import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Navy = Color(0xFF10234E)
@@ -89,7 +91,7 @@ fun AttendanceScreen(
         mutableStateOf(attendance?.responsavelAcompanhamento.orEmpty())
     }
     var attendanceDate by remember(attendance) {
-        mutableStateOf(attendance?.dataAtendimento ?: "2026-11-07")
+        mutableStateOf(attendance?.dataAtendimento ?: todayDate())
     }
     var pastorApproval by remember(attendance) {
         mutableStateOf(attendance?.vistoDoPastor ?: "Pendente")
@@ -119,7 +121,7 @@ fun AttendanceScreen(
             mainProblem = ""
             cultsToAttend = ""
             responsiblePerson = ""
-            attendanceDate = "2026-11-07"
+            attendanceDate = todayDate()
             pastorApproval = "Pendente"
         }
     }
@@ -378,7 +380,7 @@ fun AttendanceScreen(
                         fontWeight = FontWeight.Bold,
                         color = Gold,
                         modifier = Modifier
-                            .clickable { attendanceDate = "2026-11-07" }
+                            .clickable { attendanceDate = todayDate() }
                             .padding(4.dp)
                     )
                 }
@@ -400,6 +402,9 @@ fun AttendanceScreen(
         }
     }
 }
+
+private fun todayDate(): String =
+    Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
 
 @Composable
 private fun FormSection(
