@@ -7,6 +7,7 @@ Aplicativo multiplataforma para registrar e acompanhar atendimentos pastorais. A
 - O app tem três áreas principais: lista de atendimentos, cadastro/edição e detalhes.
 - Os atendimentos são gravados localmente primeiro. A sincronização com a API é tentada em seguida; itens que não sincronizam permanecem pendentes para novas tentativas.
 - Os dados locais são persistidos como JSON nas preferências da plataforma: `SharedPreferences` no Android e `NSUserDefaults` no iOS. Não há banco de dados SQL neste momento.
+- A aba **Perfil** permite salvar nickname e função/ministério no próprio dispositivo, com persistência via `SharedPreferences` no Android e `NSUserDefaults` no iOS.
 - A data inicial do cadastro e o atalho **Hoje** usam a data local do dispositivo. Ao editar, a data existente é mantida.
 - O agendamento de notificações de lembrete está implementado no Android com WorkManager. O código iOS atual não possui um fluxo equivalente de notificações.
 - A API está configurada no código para `https://unibookback.onrender.com`.
@@ -107,7 +108,9 @@ O envio de um atendimento com foto tenta multipart; o caminho JSON também está
 
 ## Lembretes no Android
 
-`MainActivity` agenda o trabalho periódico em `ReminderScheduler`. O `ReminderWorker` consulta os lembretes quando há conexão e enfileira notificações com atraso; `DelayedNotificationWorker` publica a notificação local. As implementações estão em `androidApp/src/main/kotlin/com/leandro/unibook/worker/`.
+`MainActivity` agenda o trabalho periódico em `ReminderScheduler` e solicita a permissão de notificações no Android 13 ou superior. O `ReminderWorker` consulta a API periodicamente (WorkManager usa intervalos aproximados de pelo menos 15 minutos) e enfileira notificações locais com 30 minutos de atraso; depois que a notificação é exibida, `DelayedNotificationWorker` confirma o lembrete na API. As implementações estão em `androidApp/src/main/kotlin/com/leandro/unibook/worker/`.
+
+Esse fluxo é polling da API seguido de notificação local no Android, não push remoto por Firebase/APNs. Push remoto exige integração de tokens e serviço de envio no backend. O app iOS ainda não possui implementação de notificações.
 
 ## Observações para quem está chegando
 

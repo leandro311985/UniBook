@@ -46,15 +46,6 @@ class ReminderWorker(
                     ExistingWorkPolicy.KEEP,
                     delayedWork
                 )
-
-                // Confirma o recebimento/conclusão do lembrete na API para não continuar disparando periodicamente
-                if (!attendanceId.isNullOrBlank()) {
-                    try {
-                        apiService.confirmReminder(attendanceId)
-                    } catch (e: Exception) {
-                        if (e is kotlinx.coroutines.CancellationException) throw e
-                    }
-                }
             }
             Result.success()
         } catch (e: Exception) {

@@ -24,9 +24,9 @@ import com.leandro.unibook.attendance.domain.model.ChurchSituation
 import com.leandro.unibook.attendance.presentation.AttendanceUiState
 import com.leandro.unibook.attendance.presentation.AttendanceViewModel
 import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Navy = Color(0xFF10234E)

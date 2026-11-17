@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.leandro.unibook.attendance.domain.usecase.GetAttendancesUseCase
 import com.leandro.unibook.home.data.ChurchSettingsRepository
+import com.leandro.unibook.home.data.UserProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,8 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(
     private val getAttendances: GetAttendancesUseCase,
-    private val churchSettingsRepository: ChurchSettingsRepository? = null
+    private val churchSettingsRepository: ChurchSettingsRepository? = null,
+    private val userProfileRepository: UserProfileRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -25,6 +27,10 @@ class HomeViewModel(
         private set
 
     var churchPhotoBase64 by mutableStateOf(churchSettingsRepository?.getChurchPhoto() ?: "")
+        private set
+    var userNickname by mutableStateOf(userProfileRepository?.getNickname().orEmpty())
+        private set
+    var userMinistry by mutableStateOf(userProfileRepository?.getMinistry().orEmpty())
         private set
 
     init {
@@ -37,6 +43,12 @@ class HomeViewModel(
         churchSettingsRepository?.saveChurchPhoto(photoBase64)
         churchName = name
         churchPhotoBase64 = photoBase64
+    }
+
+    fun updateUserProfile(nickname: String, ministry: String) {
+        userProfileRepository?.saveProfile(nickname, ministry)
+        userNickname = nickname
+        userMinistry = ministry
     }
 
     private fun observeAttendances() {
