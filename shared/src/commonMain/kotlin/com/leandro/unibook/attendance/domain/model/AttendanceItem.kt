@@ -13,5 +13,6 @@ data class AttendanceItem(
     val responsavelAcompanhamento: String,
     val dataAtendimento: String,
     val vistoDoPastor: String,
-    val fotoBase64: String = ""
+    val fotoBase64: String = "",
+    val nomeDoGrupo: String = ""
 )

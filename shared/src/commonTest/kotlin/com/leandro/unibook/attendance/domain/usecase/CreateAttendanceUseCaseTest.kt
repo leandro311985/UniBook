@@ -47,7 +47,7 @@ class CreateAttendanceUseCaseTest {
         val result = useCase(validParams().copy(dataAtendimento = "07/11/2026"))
 
         assertEquals(
-            AttendanceResult.Error("Informe a data no formato AAAA-MM-DD."),
+            AttendanceResult.Error("Informe a data no formato DD/MM/AAAA."),
             result
         )
         assertNull(repository.receivedParams)

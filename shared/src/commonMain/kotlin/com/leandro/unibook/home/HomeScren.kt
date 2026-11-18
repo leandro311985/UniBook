@@ -21,12 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.leandro.unibook.attendance.data.local.AttendanceEntity
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.attendance.domain.model.toAttendanceDisplayDate
 import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
 import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
 import com.leandro.unibook.home.presentation.HomeUiState
@@ -35,7 +38,6 @@ import com.leandro.unibook.ui.theme.AppColors
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Gold = Color(0xFFE5A51B)
-private val Background = Color(0xFFF9FAFC)
 private val LightBlue = Color(0xFFEFF4FF)
 private val TextDark = Color(0xFF1E293B)
 private val TextMuted = Color(0xFF64748B)
@@ -168,7 +170,7 @@ fun HomeScreenContent(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = AppColors.Background,
         bottomBar = {
             NavigationBar(
                 containerColor = Color.White,
@@ -368,7 +370,7 @@ fun HomeScreenContent(
                 CategoryItem("Primeira Vez", Icons.Default.Favorite, AppColors.Primary, "PRIMEIRA_VEZ"),
                 CategoryItem("Afastado(a)", Icons.Default.PersonSearch, Gold, "AFASTADO"),
                 CategoryItem("Membro", Icons.Default.Groups, AppColors.Primary, "MEMBRO"),
-                CategoryItem("Oração", Icons.Default.VolunteerActivism, Gold)
+                CategoryItem("Grupo", Icons.Default.GroupWork, Gold, "GRUPO")
             )
 
             Row(
@@ -694,7 +696,13 @@ private fun AttendanceCard(
     onView: () -> Unit,
     onEdit: () -> Unit
 ) {
-    val mainTag = item.situacaoNaIgreja.firstOrNull() ?: "ATENDIMENTO"
+    val uriHandler = LocalUriHandler.current
+    val whatsAppNumber = item.telefone.toWhatsAppNumber()
+    val mainTag = if (item.nomeDoGrupo.isNotBlank()) {
+        "GRUPO: ${item.nomeDoGrupo.uppercase()}"
+    } else {
+        item.situacaoNaIgreja.firstOrNull() ?: "ATENDIMENTO"
+    }
     val locationDetail = listOf(item.bairro, item.endereco).filter { it.isNotBlank() }.joinToString(" - ")
         .ifEmpty { item.maiorProblema.ifEmpty { "Sem detalhes" } }
 
@@ -748,7 +756,7 @@ private fun AttendanceCard(
                     )
                 }
                 Text(
-                    text = item.dataAtendimento,
+                    text = item.dataAtendimento.toAttendanceDisplayDate(),
                     fontSize = 12.sp,
                     color = TextMuted
                 )
@@ -769,6 +777,45 @@ private fun AttendanceCard(
                 color = TextMuted,
                 maxLines = 2
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Call,
+                    contentDescription = "Telefone",
+                    tint = TextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = item.telefone,
+                    fontSize = 13.sp,
+                    color = TextMuted,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    enabled = whatsAppNumber.isNotEmpty(),
+                    onClick = { uriHandler.openUri("https://wa.me/$whatsAppNumber") },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF25D366)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Call,
+                            contentDescription = "Abrir WhatsApp para ${item.nome}",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(14.dp))
 
@@ -799,11 +846,50 @@ private fun AttendanceCard(
     }
 }
 
+private fun String.toWhatsAppNumber(): String {
+    val digits = filter(Char::isDigit)
+    return if (digits.length == 10 || digits.length == 11) "55$digits" else digits
+}
+
 
 @Composable
 @Preview(showBackground = true)
 fun HomePreviewTest(){
-    HomeScreenContent()
+    HomeScreenContent(
+        uiState = HomeUiState.Success(listOf(
+            AttendanceItem(
+                id = "1",
+                nome = "João da Silva",
+                telefone = "(11) 91234-5678",
+                bairro = "Centro",
+                endereco = "Rua das Flores, 123",
+                maiorProblema = "Problema de saúde",
+                situacaoNaIgreja = listOf("MEMBRO"),
+                dataAtendimento = "2024-06-15",
+                fotoBase64 = "",
+                responsavelAcompanhamento = "Pastor José",
+                vistoDoPastor = "Visto",
+                email = "l",
+                cultosAFrequentar = ""
+            ),
+            AttendanceItem(
+                id = "2",
+                nome = "Maria Oliveira",
+                telefone = "(21) 98765-4321",
+                bairro = "Jardim América",
+                endereco = "Av. Brasil, 456",
+                maiorProblema = "Afastamento espiritual",
+                situacaoNaIgreja = listOf("AFASTADO"),
+                dataAtendimento = "2024-06-14",
+                fotoBase64 = "",
+                responsavelAcompanhamento = "",
+                vistoDoPastor = "Visto",
+                email = "l",
+                cultosAFrequentar = ""
+            )
+        )),
+
+    )
 }
 
 @Composable

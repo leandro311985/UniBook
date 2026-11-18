@@ -22,5 +22,6 @@ data class AttendanceEntity(
     val dataAtendimento: String,
     val vistoDoPastor: String = "Pendente",
     val fotoBase64: String = "",
+    val nomeDoGrupo: String = "",
     val syncStatus: SyncStatus = SyncStatus.PENDING_SYNC
 )

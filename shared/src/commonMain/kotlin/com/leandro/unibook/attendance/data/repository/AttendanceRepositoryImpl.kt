@@ -43,6 +43,7 @@ class AttendanceRepositoryImpl(
                 dataAtendimento = params.dataAtendimento,
                 vistoDoPastor = params.vistoDoPastor.ifEmpty { "Pendente" },
                 fotoBase64 = params.fotoBase64,
+                nomeDoGrupo = params.nomeDoGrupo.trim(),
                 syncStatus = SyncStatus.PENDING_SYNC
             )
 
@@ -78,6 +79,7 @@ class AttendanceRepositoryImpl(
                 dataAtendimento = params.dataAtendimento,
                 vistoDoPastor = params.vistoDoPastor.ifEmpty { "Pendente" },
                 fotoBase64 = params.fotoBase64.ifEmpty { existing?.fotoBase64 ?: "" },
+                nomeDoGrupo = params.nomeDoGrupo.trim(),
                 syncStatus = existing?.syncStatus ?: SyncStatus.SYNCED
             )
 
@@ -133,6 +135,7 @@ class AttendanceRepositoryImpl(
                     dataAtendimento = dto.dataAtendimento,
                     vistoDoPastor = dto.vistoDoPastor ?: "Pendente",
                     fotoBase64 = dto.effectiveFotoBase64,
+                    nomeDoGrupo = dto.nomeDoGrupo ?: "",
                     syncStatus = SyncStatus.SYNCED
                 )
             }
@@ -200,7 +203,8 @@ class AttendanceRepositoryImpl(
         responsavelAcompanhamento = responsavelAcompanhamento,
         dataAtendimento = dataAtendimento,
         vistoDoPastor = vistoDoPastor,
-        fotoBase64 = fotoBase64
+        fotoBase64 = fotoBase64,
+        nomeDoGrupo = nomeDoGrupo
     )
 
     private fun AttendanceParams.toRequestDto() = AttendanceRequestDto(
@@ -216,7 +220,8 @@ class AttendanceRepositoryImpl(
         dataAtendimento = dataAtendimento,
         vistoDoPastor = vistoDoPastor.ifEmpty { "Pendente" },
         fotoBase64 = fotoBase64.ifEmpty { null },
-        foto = fotoBase64.ifEmpty { null }
+        foto = fotoBase64.ifEmpty { null },
+        nomeDoGrupo = nomeDoGrupo.trim().ifEmpty { null }
     )
 
     private fun AttendanceEntity.toRequestDto() = AttendanceRequestDto(
@@ -232,6 +237,7 @@ class AttendanceRepositoryImpl(
         dataAtendimento = dataAtendimento,
         vistoDoPastor = vistoDoPastor,
         fotoBase64 = fotoBase64.ifEmpty { null },
-        foto = fotoBase64.ifEmpty { null }
+        foto = fotoBase64.ifEmpty { null },
+        nomeDoGrupo = nomeDoGrupo.ifEmpty { null }
     )
 }

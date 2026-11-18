@@ -26,9 +26,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.attendance.domain.model.toAttendanceDisplayDate
 import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
 import com.leandro.unibook.ui.theme.AppColors
 
@@ -36,7 +38,6 @@ val PaperBlue = Color(0xFF0F2B5B)
 private val LineBlue = Color(0xFF7B93B8)
 private val TextDark = Color(0xFF1E293B)
 private val PaperBg = Color(0xFFFFFFFF)
-private val DeskBg = Color(0xFFEBE8E3)
 
 @Composable
 fun AttendanceDetailsScreen(
@@ -45,7 +46,7 @@ fun AttendanceDetailsScreen(
     onEdit: () -> Unit
 ) {
     Scaffold(
-        containerColor = DeskBg,
+        containerColor = AppColors.Background,
         topBar = {
             TopAppBar(
                 title = {
@@ -188,6 +189,14 @@ fun AttendanceDetailsScreen(
                                     label = "Membro",
                                     checked = statusList.contains("MEMBRO")
                                 )
+                                NotebookCheck(
+                                    label = "Grupo",
+                                    checked = statusList.contains("GRUPO")
+                                )
+                            }
+                            if (attendance.nomeDoGrupo.isNotBlank()) {
+                                Spacer(Modifier.height(4.dp))
+                                NotebookLinedField(label = "Nome do Grupo:", value = attendance.nomeDoGrupo)
                             }
                             Spacer(Modifier.height(4.dp))
                             HorizontalDivider(thickness = 1.dp, color = LineBlue)
@@ -222,7 +231,7 @@ fun AttendanceDetailsScreen(
                         // SEÇÃO RODAPÉ: Atendimento e Visto do Pastor
                         NotebookLinedField(
                             label = "Data do Atendimento:",
-                            value = attendance.dataAtendimento
+                            value = attendance.dataAtendimento.toAttendanceDisplayDate()
                         )
                         NotebookLinedField(
                             label = "Visto do Pastor:",
@@ -355,6 +364,32 @@ private fun NotebookCheck(
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = PaperBlue
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun AttendanceDetailsScreenPreview() {
+    MaterialTheme {
+        AttendanceDetailsScreen(
+            attendance = AttendanceItem(
+                id = "1",
+                nome = "João da Silva",
+                endereco = "Rua das Flores, 123",
+                bairro = "Centro",
+                telefone = "(11) 91234-5678",
+                email = "joao.silva@email.com",
+                situacaoNaIgreja = listOf("MEMBRO"),
+                maiorProblema = "Problema de saúde e busca por fortalecimento espiritual.",
+                cultosAFrequentar = "Domingo às 18h e Quarta-feira às 19h30.",
+                responsavelAcompanhamento = "Pastor José",
+                dataAtendimento = "2024-06-15",
+                vistoDoPastor = "Visto pelo Pastor",
+                fotoBase64 = ""
+            ),
+            onBack = {},
+            onEdit = {}
         )
     }
 }

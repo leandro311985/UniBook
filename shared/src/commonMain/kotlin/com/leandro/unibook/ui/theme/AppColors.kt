@@ -14,6 +14,7 @@ object AppColors {
     val HeaderPattern = Color(0xFF1F1F9E)
     
     // Cores de Superfície e Fundo
+    val Background = Color(0xFFD6E5F2)
     val CardBackground = Color(0xFFFFFFFF)
     val InputBackground = Color(0xFFF7F7F9)
     val InputBorder = Color(0xFFEEEEEE)

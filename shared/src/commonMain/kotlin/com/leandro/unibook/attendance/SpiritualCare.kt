@@ -1,6 +1,7 @@
 package com.leandro.unibook.attendance
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,9 +22,12 @@ import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceParams
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.domain.model.ChurchSituation
+import com.leandro.unibook.attendance.domain.model.toAttendanceDisplayDate
+import com.leandro.unibook.attendance.domain.model.toAttendanceStorageDate
 import com.leandro.unibook.attendance.presentation.AttendanceUiState
 import com.leandro.unibook.attendance.presentation.AttendanceViewModel
 import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
+import com.leandro.unibook.ui.theme.AppColors
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
@@ -31,7 +35,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 private val Navy = Color(0xFF10234E)
 private val Gold = Color(0xFFE5A51B)
-private val Background = Color(0xFFF7F8FC)
 
 @Composable
 fun FormScreen(
@@ -80,6 +83,12 @@ fun AttendanceScreen(
     var member by remember(attendance) {
         mutableStateOf("MEMBRO" in attendance?.situacaoNaIgreja.orEmpty())
     }
+    var groupMember by remember(attendance) {
+        mutableStateOf("GRUPO" in attendance?.situacaoNaIgreja.orEmpty())
+    }
+    var groupName by remember(attendance) {
+        mutableStateOf(attendance?.nomeDoGrupo.orEmpty())
+    }
 
     var mainProblem by remember(attendance) {
         mutableStateOf(attendance?.maiorProblema.orEmpty())
@@ -91,7 +100,7 @@ fun AttendanceScreen(
         mutableStateOf(attendance?.responsavelAcompanhamento.orEmpty())
     }
     var attendanceDate by remember(attendance) {
-        mutableStateOf(attendance?.dataAtendimento ?: todayDate())
+        mutableStateOf(attendance?.dataAtendimento?.toAttendanceDisplayDate() ?: todayDate())
     }
     var pastorApproval by remember(attendance) {
         mutableStateOf(attendance?.vistoDoPastor ?: "Pendente")
@@ -118,6 +127,8 @@ fun AttendanceScreen(
             firstVisit = false
             away = false
             member = false
+            groupMember = false
+            groupName = ""
             mainProblem = ""
             cultsToAttend = ""
             responsiblePerson = ""
@@ -127,7 +138,7 @@ fun AttendanceScreen(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = AppColors.Background,
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
@@ -207,11 +218,13 @@ fun AttendanceScreen(
                                         if (firstVisit) add(ChurchSituation.PRIMEIRA_VEZ)
                                         if (away) add(ChurchSituation.AFASTADO)
                                         if (member) add(ChurchSituation.MEMBRO)
+                                        if (groupMember) add(ChurchSituation.GRUPO)
                                     },
+                                    nomeDoGrupo = if (groupMember) groupName else "",
                                     maiorProblema = mainProblem,
                                     cultosAFrequentar = cultsToAttend,
                                     responsavelAcompanhamento = responsiblePerson,
-                                    dataAtendimento = attendanceDate,
+                                    dataAtendimento = attendanceDate.toAttendanceStorageDate(),
                                     vistoDoPastor = pastorApproval,
                                     fotoBase64 = photoBase64
                                 )
@@ -316,7 +329,7 @@ fun AttendanceScreen(
             }
 
             // CAPTURA DE FOTO
-            FormSection("Foto da Pessoa (Câmera)") {
+            FormSection("Foto (Câmera)") {
                 CameraPhotoPicker(
                     photoBase64 = photoBase64,
                     onPhotoCaptured = { photoBase64 = it }
@@ -325,11 +338,11 @@ fun AttendanceScreen(
 
             // DADOS PESSOAIS
             FormSection("Dados pessoais") {
-                FormInput("Nome completo *", name, { name = it }, placeholder = "Maria Silva")
-                FormInput("Endereço", address, { address = it }, placeholder = "Rua das Flores, 123")
-                FormInput("Bairro", neighborhood, { neighborhood = it }, placeholder = "Centro")
-                FormInput("Telefone / Celular *", phone, { phone = it }, placeholder = "11999999999")
-                FormInput("E-mail", email, { email = it }, placeholder = "maria@example.com")
+                FormInput("Nome completo *", name, { name = it }, placeholder = "Ex: Maria Silva")
+                FormInput("Endereço", address, { address = it }, placeholder = "Ex: Rua das Flores, 123")
+                FormInput("Bairro", neighborhood, { neighborhood = it }, placeholder = "Ex: Centro")
+                FormInput("Telefone / Celular *", phone, { phone = it }, placeholder = "Ex: 11999999999")
+                FormInput("E-mail", email, { email = it }, placeholder = "Ex: maria@example.com")
             }
 
             // SITUAÇÃO NA IGREJA
@@ -338,6 +351,17 @@ fun AttendanceScreen(
                     FormCheck("Primeira vez", firstVisit) { firstVisit = it }
                     FormCheck("Afastado(a)", away) { away = it }
                     FormCheck("Membro", member) { member = it }
+                    FormCheck("Grupo", groupMember) { groupMember = it }
+
+                    if (groupMember) {
+                        Spacer(Modifier.height(8.dp))
+                        FormInput(
+                            label = "Nome do grupo / ministério *",
+                            value = groupName,
+                            onValueChange = { groupName = it },
+                            placeholder = "Ex: Evangelistas, Grupo de Oração"
+                        )
+                    }
                 }
             }
 
@@ -389,7 +413,7 @@ fun AttendanceScreen(
                     value = attendanceDate,
                     onValueChange = { attendanceDate = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("AAAA-MM-DD", fontSize = 14.sp) },
+                    placeholder = { Text("DD/MM/AAAA", fontSize = 14.sp) },
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp)
                 )
@@ -404,7 +428,7 @@ fun AttendanceScreen(
 }
 
 private fun todayDate(): String =
-    Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
+    Clock.System.todayIn(TimeZone.currentSystemDefault()).toString().toAttendanceDisplayDate()
 
 @Composable
 private fun FormSection(
@@ -494,6 +518,19 @@ private fun FormCheck(
             title,
             color = Navy,
             fontSize = 14.sp
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun FormScreenPreview() {
+    MaterialTheme {
+        AttendanceScreen(
+            attendance = null,
+            uiState = AttendanceUiState.Idle,
+            onSave = {},
+            onBack = {}
         )
     }
 }

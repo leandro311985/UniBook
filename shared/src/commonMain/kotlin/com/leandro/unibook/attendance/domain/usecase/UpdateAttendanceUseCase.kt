@@ -15,7 +15,7 @@ class UpdateAttendanceUseCase(
             return AttendanceResult.Error("Informe o telefone.")
         }
         if (!params.dataAtendimento.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
-            return AttendanceResult.Error("Informe a data no formato AAAA-MM-DD.")
+            return AttendanceResult.Error("Informe a data no formato DD/MM/AAAA.")
         }
         return repository.update(id, params)
     }
