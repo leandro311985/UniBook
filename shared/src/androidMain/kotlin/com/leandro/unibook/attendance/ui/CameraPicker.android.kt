@@ -116,7 +116,7 @@ actual fun CameraPhotoPicker(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "Tirar Foto da Pessoa (Câmera)",
+                        "Tirar Foto (Câmera)",
                         color = Color(0xFF10234E),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold

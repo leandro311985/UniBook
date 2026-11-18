@@ -775,7 +775,7 @@ private fun AttendanceCard(
                 text = locationDetail,
                 fontSize = 13.sp,
                 color = TextMuted,
-                maxLines = 2
+                maxLines = 1
             )
 
             Row(

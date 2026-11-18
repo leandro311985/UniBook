@@ -11,10 +11,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,9 +37,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.attendance.domain.model.AttendanceResult
 import com.leandro.unibook.attendance.domain.model.toAttendanceDisplayDate
 import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
 import com.leandro.unibook.ui.theme.AppColors
+import kotlinx.coroutines.launch
 
 val PaperBlue = Color(0xFF0F2B5B)
 private val LineBlue = Color(0xFF7B93B8)
@@ -43,8 +52,61 @@ private val PaperBg = Color(0xFFFFFFFF)
 fun AttendanceDetailsScreen(
     attendance: AttendanceItem,
     onBack: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onDelete: suspend () -> AttendanceResult = { AttendanceResult.Success },
+    onDeleted: () -> Unit = {}
 ) {
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isDeleting) showDeleteConfirmation = false
+            },
+            title = { Text("Excluir atendimento?") },
+            text = {
+                Text(
+                    deleteError ?: "O atendimento de ${attendance.nome} será removido do app e do servidor.",
+                    textAlign = TextAlign.Start
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isDeleting,
+                    onClick = {
+                        scope.launch {
+                            isDeleting = true
+                            when (val result = onDelete()) {
+                                AttendanceResult.Success -> onDeleted()
+                                is AttendanceResult.Error -> {
+                                    deleteError = result.message
+                                    isDeleting = false
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Excluir", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isDeleting,
+                    onClick = { showDeleteConfirmation = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = AppColors.Background,
         topBar = {
@@ -58,6 +120,13 @@ fun AttendanceDetailsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showDeleteConfirmation = true }) {
+                        Icon(
+                            Icons.Default.DeleteOutline,
+                            contentDescription = "Excluir atendimento",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar ficha")
                     }
@@ -243,7 +312,7 @@ fun AttendanceDetailsScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            // BOTÃO EDITAR FICHA
+            // BOTÕES DE AÇÃO DA FICHA
             Button(
                 onClick = onEdit,
                 modifier = Modifier
@@ -255,6 +324,21 @@ fun AttendanceDetailsScreen(
                 Icon(Icons.Default.Edit, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Editar Ficha de Atendimento", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = { showDeleteConfirmation = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.DeleteOutline, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Excluir Atendimento", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         }
     }
@@ -389,7 +473,8 @@ fun AttendanceDetailsScreenPreview() {
                 fotoBase64 = ""
             ),
             onBack = {},
-            onEdit = {}
+            onEdit = {},
+            onDelete = { AttendanceResult.Success }
         )
     }
 }

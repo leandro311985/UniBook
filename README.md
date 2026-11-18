@@ -1,4 +1,4 @@
-# UniBook
+# DISCÍPULO
 
 Aplicativo multiplataforma para registrar e acompanhar atendimentos pastorais. A interface e a maior parte da lógica são compartilhadas entre Android e iOS usando Kotlin Multiplatform e Compose Multiplatform.
 
@@ -101,6 +101,7 @@ A URL base atual está em `AttendanceApiConfig.android.kt` e `AttendanceApiConfi
 | Listar atendimentos | `GET /api/atendimentos` |
 | Criar atendimento | `POST /api/atendimentos` |
 | Editar atendimento | `PUT /api/atendimentos/{id}` |
+| Excluir atendimento | `DELETE /api/atendimentos/{id}` |
 | Buscar lembretes | `GET /api/atendimentos/lembretes` |
 | Confirmar lembrete | `POST /api/atendimentos/{id}/lembrete/concluir` |
 

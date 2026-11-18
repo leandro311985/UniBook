@@ -12,6 +12,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
+import io.ktor.client.request.delete
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
@@ -89,6 +90,16 @@ class AttendanceApiService(
             contentType(ContentType.Application.Json)
             header("X-Device-Id", activeDeviceId)
             setBody(request)
+        }
+    }
+
+    suspend fun delete(
+        id: String,
+        deviceId: String? = null
+    ) {
+        val activeDeviceId = resolveDeviceId(deviceId)
+        client.delete("$baseUrl/api/atendimentos/$id") {
+            header("X-Device-Id", activeDeviceId)
         }
     }
 

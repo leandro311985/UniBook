@@ -74,6 +74,10 @@ class CreateAttendanceUseCaseTest {
             return AttendanceResult.Success
         }
 
+        override suspend fun delete(id: String): AttendanceResult {
+            return AttendanceResult.Success
+        }
+
         override suspend fun getAll(forceFetch: Boolean): List<AttendanceItem> {
             return emptyList()
         }

@@ -107,6 +107,29 @@ class AttendanceApiServiceTest {
     }
 
     @Test
+    fun deleteRemovesAttendanceFromIdEndpoint() = runTest {
+        var capturedRequest: HttpRequestData? = null
+        val client = HttpClient(
+            MockEngine { request ->
+                capturedRequest = request
+                respond(content = "", status = HttpStatusCode.NoContent)
+            }
+        )
+
+        try {
+            AttendanceApiService(client = client, baseUrl = "http://localhost:8082")
+                .delete(id = "attendance-123")
+        } finally {
+            client.close()
+        }
+
+        val sentRequest = assertNotNull(capturedRequest)
+        assertEquals(HttpMethod.Delete, sentRequest.method)
+        assertEquals("/api/atendimentos/attendance-123", sentRequest.url.encodedPath)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", sentRequest.headers["X-Device-Id"])
+    }
+
+    @Test
     fun confirmReminderPostsToConcluirEndpoint() = runTest {
         var capturedRequest: HttpRequestData? = null
         val client = HttpClient(
