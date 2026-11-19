@@ -31,8 +31,8 @@ class ReminderWorker(
                 val inputData = workDataOf(
                     "ATTENDANCE_ID" to (attendanceId ?: ""),
                     "NOTIFICATION_ID" to notificationId,
-                    "NOTIFICATION_TITLE" to "✝ Lembrete Pastoral: ${reminder.atendimento.nome}",
-                    "NOTIFICATION_MESSAGE" to reminder.mensagem
+                    "NOTIFICATION_TITLE" to "Lembrete de acompanhamento",
+                    "NOTIFICATION_MESSAGE" to "Você tem um lembrete pastoral."
                 )
 
                 // Agenda disparo com delay de 30 MINUTOS após receber da API
@@ -46,15 +46,6 @@ class ReminderWorker(
                     ExistingWorkPolicy.KEEP,
                     delayedWork
                 )
-
-                // Confirma o recebimento/conclusão do lembrete na API para não continuar disparando periodicamente
-                if (!attendanceId.isNullOrBlank()) {
-                    try {
-                        apiService.confirmReminder(attendanceId)
-                    } catch (e: Exception) {
-                        if (e is kotlinx.coroutines.CancellationException) throw e
-                    }
-                }
             }
             Result.success()
         } catch (e: Exception) {

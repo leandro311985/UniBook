@@ -90,13 +90,50 @@ class AttendanceLocalDataSource(
         }
     }
 
-    suspend fun markAsSynced(id: String) {
+    suspend fun replaceLocalIdWithRemoteId(oldLocalId: String, newRemoteId: String) {
         mutex.withLock {
-            val current = _items.value.map { item ->
-                if (item.id == id) item.copy(syncStatus = SyncStatus.SYNCED) else item
+            val current = _items.value.toMutableList()
+            val index = current.indexOfFirst { it.id == oldLocalId }
+            if (index >= 0) {
+                current[index] = current[index].copy(id = newRemoteId, syncStatus = SyncStatus.SYNCED)
+                _items.value = current
+                persistItemsLocked()
+            }
+        }
+    }
+
+    suspend fun markAsSynced(id: String, expectedEntity: AttendanceEntity? = null): Boolean {
+        mutex.withLock {
+            val current = _items.value.toMutableList()
+            val index = current.indexOfFirst { it.id == id }
+            if (index < 0) return false
+
+            val item = current[index]
+            val isDelete = expectedEntity?.pendingOperation == PendingOperation.DELETE || item.pendingOperation == PendingOperation.DELETE
+            if (isDelete) {
+                current.removeAt(index)
+            } else {
+                current[index] = item.copy(syncStatus = SyncStatus.SYNCED)
             }
             _items.value = current
             persistItemsLocked()
+            return true
+        }
+    }
+
+    suspend fun markAsPendingDelete(id: String): Boolean {
+        mutex.withLock {
+            val current = _items.value.toMutableList()
+            val index = current.indexOfFirst { it.id == id }
+            if (index < 0) return false
+
+            current[index] = current[index].copy(
+                syncStatus = SyncStatus.PENDING_SYNC,
+                pendingOperation = PendingOperation.DELETE
+            )
+            _items.value = current
+            persistItemsLocked()
+            return true
         }
     }
 
@@ -118,6 +155,12 @@ class AttendanceLocalDataSource(
     suspend fun getPendingSync(): List<AttendanceEntity> {
         mutex.withLock {
             return _items.value.filter { it.syncStatus == SyncStatus.PENDING_SYNC }
+        }
+    }
+
+    suspend fun getVisibleAll(): List<AttendanceEntity> {
+        mutex.withLock {
+            return _items.value.filter { it.pendingOperation != PendingOperation.DELETE }
         }
     }
 

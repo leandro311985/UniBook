@@ -7,6 +7,12 @@ enum class SyncStatus {
     SYNCED
 }
 
+enum class PendingOperation {
+    CREATE,
+    UPDATE,
+    DELETE
+}
+
 @Serializable
 data class AttendanceEntity(
     val id: String,
@@ -22,5 +28,7 @@ data class AttendanceEntity(
     val dataAtendimento: String,
     val vistoDoPastor: String = "Pendente",
     val fotoBase64: String = "",
-    val syncStatus: SyncStatus = SyncStatus.PENDING_SYNC
+    val nomeDoGrupo: String = "",
+    val syncStatus: SyncStatus = SyncStatus.PENDING_SYNC,
+    val pendingOperation: PendingOperation = PendingOperation.CREATE
 )

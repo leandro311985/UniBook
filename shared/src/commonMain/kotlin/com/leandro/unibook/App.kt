@@ -6,8 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 import com.leandro.unibook.attendance.FormScreen
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.attendance.domain.usecase.DeleteAttendanceUseCase
 import com.leandro.unibook.home.AttendanceDetailsScreen
 import com.leandro.unibook.home.HomeScreen
+import org.koin.compose.koinInject
 import org.koin.compose.KoinContext
 
 enum class AppScreenState {
@@ -22,6 +24,7 @@ fun App() {
     KoinContext {
         var currentScreen by remember { mutableStateOf(AppScreenState.HOME) }
         var selectedAttendance by remember { mutableStateOf<AttendanceItem?>(null) }
+        val deleteAttendance: DeleteAttendanceUseCase = koinInject()
 
         MaterialTheme {
             Crossfade(targetState = currentScreen) { screen ->
@@ -48,7 +51,9 @@ fun App() {
                         AttendanceDetailsScreen(
                             attendance = attendance,
                             onBack = { currentScreen = AppScreenState.HOME },
-                            onEdit = { currentScreen = AppScreenState.FORM }
+                            onEdit = { currentScreen = AppScreenState.FORM },
+                            onDelete = { deleteAttendance(attendance.id) },
+                            onDeleted = { currentScreen = AppScreenState.HOME }
                         )
                     } ?: HomeScreen()
                 }

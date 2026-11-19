@@ -4,7 +4,9 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>CFBundleDisplayName</key>
+	<string>DISCÍPULO</string>
 	<key>NSCameraUsageDescription</key>
-	<string>O UniBook usa a câmera para fotografar a pessoa atendida.</string>
+	<string>O DISCÍPULO usa a câmera para fotografar a pessoa atendida.</string>
 </dict>
 </plist>

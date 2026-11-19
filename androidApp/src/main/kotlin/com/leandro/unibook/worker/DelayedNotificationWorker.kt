@@ -22,18 +22,22 @@ class DelayedNotificationWorker(
         val title = inputData.getString("NOTIFICATION_TITLE") ?: "✝ Lembrete Pastoral"
         val message = inputData.getString("NOTIFICATION_MESSAGE") ?: "Você tem um acompanhamento pendente."
 
-        NotificationHelper.showReminderNotification(
+        val notificationShown = NotificationHelper.showReminderNotification(
             context = applicationContext,
             id = id,
             title = title,
             message = message
         )
+        if (!notificationShown) {
+            return Result.retry()
+        }
 
         if (!attendanceId.isNullOrBlank()) {
             try {
                 apiService.confirmReminder(attendanceId)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                return Result.retry()
             }
         }
 

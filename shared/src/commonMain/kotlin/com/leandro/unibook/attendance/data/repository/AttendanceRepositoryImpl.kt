@@ -2,6 +2,7 @@ package com.leandro.unibook.attendance.data.repository
 
 import com.leandro.unibook.attendance.data.local.AttendanceEntity
 import com.leandro.unibook.attendance.data.local.AttendanceLocalDataSource
+import com.leandro.unibook.attendance.data.local.PendingOperation
 import com.leandro.unibook.attendance.data.local.SyncStatus
 import com.leandro.unibook.attendance.data.remote.AttendanceApiService
 import com.leandro.unibook.attendance.data.remote.dto.AttendanceRequestDto
@@ -11,8 +12,14 @@ import com.leandro.unibook.attendance.domain.model.AttendanceResult
 import com.leandro.unibook.attendance.domain.repository.AttendanceRepository
 import com.leandro.unibook.attendance.presentation.ui.decodePhotoBytes
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeMark
@@ -20,11 +27,13 @@ import kotlin.time.TimeSource
 
 class AttendanceRepositoryImpl(
     private val apiService: AttendanceApiService,
-    private val localDataSource: AttendanceLocalDataSource
+    private val localDataSource: AttendanceLocalDataSource,
+    private val syncScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) : AttendanceRepository {
 
     private var lastFetchTimeMark: TimeMark? = null
     private val cacheTtl = 5.minutes
+    private val syncMutex = Mutex()
 
     override suspend fun create(params: AttendanceParams): AttendanceResult {
         return try {
@@ -43,21 +52,17 @@ class AttendanceRepositoryImpl(
                 dataAtendimento = params.dataAtendimento,
                 vistoDoPastor = params.vistoDoPastor.ifEmpty { "Pendente" },
                 fotoBase64 = params.fotoBase64,
+                nomeDoGrupo = params.nomeDoGrupo.trim(),
                 syncStatus = SyncStatus.PENDING_SYNC
             )
 
-            // 1. Salva localmente primeiro (Offline-first)
             localDataSource.save(entity)
-
-            // 2. Tenta sincronizar com o servidor em background
-            syncPending()
-
+            schedulePendingSync()
             AttendanceResult.Success
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Mesmo em falha de rede, já salvou localmente!
-            AttendanceResult.Success
+            AttendanceResult.Error(e.message ?: "Não foi possível salvar o atendimento.")
         }
     }
 
@@ -78,19 +83,20 @@ class AttendanceRepositoryImpl(
                 dataAtendimento = params.dataAtendimento,
                 vistoDoPastor = params.vistoDoPastor.ifEmpty { "Pendente" },
                 fotoBase64 = params.fotoBase64.ifEmpty { existing?.fotoBase64 ?: "" },
-                syncStatus = existing?.syncStatus ?: SyncStatus.SYNCED
+                nomeDoGrupo = params.nomeDoGrupo.trim(),
+                syncStatus = SyncStatus.PENDING_SYNC,
+                pendingOperation = if (
+                    existing?.syncStatus == SyncStatus.PENDING_SYNC &&
+                    existing.pendingOperation == PendingOperation.CREATE
+                ) {
+                    PendingOperation.CREATE
+                } else {
+                    PendingOperation.UPDATE
+                }
             )
 
-            if (existing?.syncStatus == SyncStatus.PENDING_SYNC) {
-                localDataSource.update(updated)
-                return AttendanceResult.Success
-            }
-
-            apiService.update(
-                id = id,
-                request = params.toRequestDto()
-            )
-            localDataSource.update(updated.copy(syncStatus = SyncStatus.SYNCED))
+            localDataSource.update(updated)
+            schedulePendingSync()
             AttendanceResult.Success
         } catch (e: CancellationException) {
             throw e
@@ -99,9 +105,24 @@ class AttendanceRepositoryImpl(
         }
     }
 
+    override suspend fun delete(id: String): AttendanceResult {
+        return try {
+            if (!localDataSource.markAsPendingDelete(id)) {
+                return AttendanceResult.Error("O atendimento não foi encontrado.")
+            }
+            schedulePendingSync()
+            AttendanceResult.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AttendanceResult.Error(e.message ?: "Não foi possível excluir o atendimento.")
+        }
+    }
+
     override fun observeAll(): Flow<List<AttendanceItem>> {
         return localDataSource.items.map { list ->
-            list.map { it.toDomain() }
+            list.filter { it.pendingOperation != PendingOperation.DELETE }
+                .map { it.toDomain() }
         }
     }
 
@@ -111,7 +132,7 @@ class AttendanceRepositoryImpl(
         val isCacheValid = !forceFetch && !hasPending && elapsed != null && elapsed < cacheTtl && localDataSource.getAll().isNotEmpty()
 
         if (isCacheValid) {
-            return localDataSource.getAll().map { it.toDomain() }
+            return localDataSource.getVisibleAll().map { it.toDomain() }
         }
 
         // Tenta sincronizar pendentes e buscar atualizações da API
@@ -133,6 +154,7 @@ class AttendanceRepositoryImpl(
                     dataAtendimento = dto.dataAtendimento,
                     vistoDoPastor = dto.vistoDoPastor ?: "Pendente",
                     fotoBase64 = dto.effectiveFotoBase64,
+                    nomeDoGrupo = dto.nomeDoGrupo ?: "",
                     syncStatus = SyncStatus.SYNCED
                 )
             }
@@ -144,37 +166,99 @@ class AttendanceRepositoryImpl(
             // Em caso de erro de rede, utiliza os dados locais
         }
 
-        return localDataSource.getAll().map { it.toDomain() }
+        return localDataSource.getVisibleAll().map { it.toDomain() }
     }
 
     override suspend fun syncPending(): Int {
-        val pending = localDataSource.getPendingSync()
-        var syncedCount = 0
+        return syncMutex.withLock {
+            val pending = localDataSource.getPendingSync()
+            var syncedCount = 0
 
-        for (item in pending) {
-            try {
-                val dto = item.toRequestDto()
-                val photoBytes = decodePhotoBytes(item.fotoBase64)
-
+            for (item in pending) {
                 try {
-                    apiService.createMultipart(
-                        request = dto,
-                        fotoBytes = photoBytes
-                    )
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    apiService.create(request = dto)
-                }
+                    when (item.pendingOperation) {
+                        PendingOperation.CREATE -> {
+                            val dto = item.toRequestDto()
+                            val photoBytes = decodePhotoBytes(item.fotoBase64)
 
-                localDataSource.markAsSynced(item.id)
-                syncedCount++
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Mantém como PENDING_SYNC para tentar novamente depois
+                            val created = try {
+                                if (photoBytes != null && photoBytes.isNotEmpty()) {
+                                    apiService.createMultipart(
+                                        request = dto,
+                                        fotoBytes = photoBytes
+                                    )
+                                } else {
+                                    apiService.create(request = dto)
+                                }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                apiService.create(request = dto)
+                            }
+
+                            if (!created?.id.isNullOrBlank()) {
+                                localDataSource.replaceLocalIdWithRemoteId(item.id, created.id)
+                            } else {
+                                localDataSource.markAsSynced(item.id, item)
+                            }
+                        }
+                        PendingOperation.UPDATE -> {
+                            val dto = item.toRequestDto()
+                            val photoBytes = decodePhotoBytes(item.fotoBase64)
+
+                            if (item.id.startsWith("local_")) {
+                                val created = try {
+                                    if (photoBytes != null && photoBytes.isNotEmpty()) {
+                                        apiService.createMultipart(request = dto, fotoBytes = photoBytes)
+                                    } else {
+                                        apiService.create(request = dto)
+                                    }
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    apiService.create(request = dto)
+                                }
+
+                                if (!created?.id.isNullOrBlank()) {
+                                    localDataSource.replaceLocalIdWithRemoteId(item.id, created.id)
+                                } else {
+                                    localDataSource.markAsSynced(item.id, item)
+                                }
+                            } else {
+                                try {
+                                    if (photoBytes != null && photoBytes.isNotEmpty()) {
+                                        apiService.updateMultipart(id = item.id, request = dto, fotoBytes = photoBytes)
+                                    } else {
+                                        apiService.update(id = item.id, request = dto)
+                                    }
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    apiService.update(id = item.id, request = dto)
+                                }
+                                localDataSource.markAsSynced(item.id, item)
+                            }
+                        }
+                        PendingOperation.DELETE -> {
+                            if (!item.id.startsWith("local_")) {
+                                apiService.delete(id = item.id)
+                            }
+                            localDataSource.markAsSynced(item.id, item)
+                        }
+                    }
+
+                    syncedCount++
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    println("Erro ao sincronizar atendimento ${item.id}: ${e.message}")
+                }
             }
+            syncedCount
         }
-        return syncedCount
+    }
+
+    private fun schedulePendingSync() {
+        syncScope.launch {
+            syncPending()
+        }
     }
 
     override suspend fun confirmReminder(id: String) {
@@ -200,7 +284,8 @@ class AttendanceRepositoryImpl(
         responsavelAcompanhamento = responsavelAcompanhamento,
         dataAtendimento = dataAtendimento,
         vistoDoPastor = vistoDoPastor,
-        fotoBase64 = fotoBase64
+        fotoBase64 = fotoBase64,
+        nomeDoGrupo = nomeDoGrupo
     )
 
     private fun AttendanceParams.toRequestDto() = AttendanceRequestDto(
@@ -216,7 +301,8 @@ class AttendanceRepositoryImpl(
         dataAtendimento = dataAtendimento,
         vistoDoPastor = vistoDoPastor.ifEmpty { "Pendente" },
         fotoBase64 = fotoBase64.ifEmpty { null },
-        foto = fotoBase64.ifEmpty { null }
+        foto = null,
+        nomeDoGrupo = nomeDoGrupo.trim().ifEmpty { null }
     )
 
     private fun AttendanceEntity.toRequestDto() = AttendanceRequestDto(
@@ -232,6 +318,7 @@ class AttendanceRepositoryImpl(
         dataAtendimento = dataAtendimento,
         vistoDoPastor = vistoDoPastor,
         fotoBase64 = fotoBase64.ifEmpty { null },
-        foto = fotoBase64.ifEmpty { null }
+        foto = null,
+        nomeDoGrupo = nomeDoGrupo.ifEmpty { null }
     )
 }

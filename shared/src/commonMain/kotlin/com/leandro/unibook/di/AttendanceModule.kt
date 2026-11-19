@@ -5,6 +5,7 @@ import com.leandro.unibook.attendance.data.remote.AttendanceApiService
 import com.leandro.unibook.attendance.data.repository.AttendanceRepositoryImpl
 import com.leandro.unibook.attendance.domain.repository.AttendanceRepository
 import com.leandro.unibook.attendance.domain.usecase.CreateAttendanceUseCase
+import com.leandro.unibook.attendance.domain.usecase.DeleteAttendanceUseCase
 import com.leandro.unibook.attendance.domain.usecase.GetAttendancesUseCase
 import com.leandro.unibook.attendance.domain.usecase.UpdateAttendanceUseCase
 import com.leandro.unibook.attendance.presentation.AttendanceViewModel
@@ -41,10 +42,19 @@ val attendanceModule = module {
     }
     single { AttendanceLocalDataSource(storageRepository = getOrNull()) }
     single { AttendanceApiService(client = get(), deviceIdProvider = getOrNull()) }
+    single { com.leandro.unibook.home.data.remote.UserApiService(client = get(), deviceIdProvider = getOrNull()) }
     single<AttendanceRepository> { AttendanceRepositoryImpl(apiService = get(), localDataSource = get()) }
     single { CreateAttendanceUseCase(repository = get()) }
+    single { DeleteAttendanceUseCase(repository = get()) }
     single { UpdateAttendanceUseCase(repository = get()) }
     single { GetAttendancesUseCase(repository = get()) }
     factory { AttendanceViewModel(createAttendance = get(), updateAttendance = get()) }
-    factory { HomeViewModel(getAttendances = get(), churchSettingsRepository = getOrNull()) }
+    factory {
+        HomeViewModel(
+            getAttendances = get(),
+            churchSettingsRepository = getOrNull(),
+            userProfileRepository = getOrNull(),
+            userApiService = getOrNull()
+        )
+    }
 }

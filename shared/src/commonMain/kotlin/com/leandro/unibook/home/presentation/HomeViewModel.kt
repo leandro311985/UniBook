@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.leandro.unibook.attendance.domain.usecase.GetAttendancesUseCase
 import com.leandro.unibook.home.data.ChurchSettingsRepository
+import com.leandro.unibook.home.data.UserProfileRepository
+import com.leandro.unibook.home.data.remote.UserApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +17,9 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(
     private val getAttendances: GetAttendancesUseCase,
-    private val churchSettingsRepository: ChurchSettingsRepository? = null
+    private val churchSettingsRepository: ChurchSettingsRepository? = null,
+    private val userProfileRepository: UserProfileRepository? = null,
+    private val userApiService: UserApiService? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -26,10 +30,17 @@ class HomeViewModel(
 
     var churchPhotoBase64 by mutableStateOf(churchSettingsRepository?.getChurchPhoto() ?: "")
         private set
+    var userNickname by mutableStateOf(userProfileRepository?.getNickname().orEmpty())
+        private set
+    var userPhone by mutableStateOf(userProfileRepository?.getPhone().orEmpty())
+        private set
+    var userMinistry by mutableStateOf(userProfileRepository?.getMinistry().orEmpty())
+        private set
 
     init {
         observeAttendances()
         loadAttendances()
+        syncUserDataIfNeeded()
     }
 
     fun updateChurchProfile(name: String, photoBase64: String) {
@@ -37,6 +48,32 @@ class HomeViewModel(
         churchSettingsRepository?.saveChurchPhoto(photoBase64)
         churchName = name
         churchPhotoBase64 = photoBase64
+    }
+
+    fun updateUserProfile(nickname: String, phone: String, ministry: String) {
+        userProfileRepository?.saveProfile(nickname, phone, ministry)
+        userNickname = nickname
+        userPhone = phone
+        userMinistry = ministry
+
+        syncUserData(nickname, phone)
+    }
+
+    private fun syncUserData(nickname: String, phone: String) {
+        if (nickname.isBlank() && phone.isBlank()) return
+        viewModelScope.launch {
+            try {
+                userApiService?.saveUserData(nickname = nickname, telefone = phone)
+            } catch (e: Exception) {
+                println("Erro ao sincronizar dados do usuário: ${e.message}")
+            }
+        }
+    }
+
+    private fun syncUserDataIfNeeded() {
+        if (userNickname.isNotBlank() || userPhone.isNotBlank()) {
+            syncUserData(userNickname, userPhone)
+        }
     }
 
     private fun observeAttendances() {

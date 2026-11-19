@@ -21,11 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.leandro.unibook.attendance.data.local.AttendanceEntity
 import com.leandro.unibook.attendance.domain.model.AttendanceItem
+import com.leandro.unibook.attendance.domain.model.toAttendanceDisplayDate
 import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
 import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
 import com.leandro.unibook.home.presentation.HomeUiState
@@ -34,7 +38,6 @@ import com.leandro.unibook.ui.theme.AppColors
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Gold = Color(0xFFE5A51B)
-private val Background = Color(0xFFF9FAFC)
 private val LightBlue = Color(0xFFEFF4FF)
 private val TextDark = Color(0xFF1E293B)
 private val TextMuted = Color(0xFF64748B)
@@ -57,7 +60,13 @@ fun HomeScreen(
         uiState = uiState,
         churchName = viewModel.churchName,
         churchPhotoBase64 = viewModel.churchPhotoBase64,
+        userNickname = viewModel.userNickname,
+        userPhone = viewModel.userPhone,
+        userMinistry = viewModel.userMinistry,
         onSaveChurch = { name, photo -> viewModel.updateChurchProfile(name, photo) },
+        onSaveUserProfile = { nickname, phone, ministry ->
+            viewModel.updateUserProfile(nickname, phone, ministry)
+        },
         onAttendanceClick = onAttendanceClick,
         onViewAttendance = onViewAttendance,
         onEditAttendance = onEditAttendance,
@@ -70,7 +79,11 @@ fun HomeScreenContent(
     uiState: HomeUiState = HomeUiState.Loading,
     churchName: String = "Igreja Central - Sede",
     churchPhotoBase64: String = "",
+    userNickname: String = "",
+    userPhone: String = "",
+    userMinistry: String = "",
     onSaveChurch: (name: String, photoBase64: String) -> Unit = { _, _ -> },
+    onSaveUserProfile: (nickname: String, phone: String, ministry: String) -> Unit = { _, _, _ -> },
     onAttendanceClick: () -> Unit = {},
     onViewAttendance: (AttendanceItem) -> Unit = {},
     onEditAttendance: (AttendanceItem) -> Unit = {},
@@ -78,6 +91,7 @@ fun HomeScreenContent(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedSituationFilter by remember { mutableStateOf<String?>(null) }
 
     // Estados para o modal de personalização da igreja
     var showChurchModal by remember { mutableStateOf(false) }
@@ -158,7 +172,7 @@ fun HomeScreenContent(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = AppColors.Background,
         bottomBar = {
             NavigationBar(
                 containerColor = Color.White,
@@ -167,7 +181,6 @@ fun HomeScreenContent(
                 val items = listOf(
                     "Início" to Icons.Default.Home,
                     "Atendimentos" to Icons.Default.VolunteerActivism,
-                    "Notificações" to Icons.Outlined.Notifications,
                     "Perfil" to Icons.Outlined.Person
                 )
 
@@ -195,13 +208,23 @@ fun HomeScreenContent(
             }
         }
     ) { padding ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-        ) {
+        if (selectedTab == 2) {
+            UserProfileScreen(
+                nickname = userNickname,
+                phone = userPhone,
+                ministry = userMinistry,
+                onSave = onSaveUserProfile,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
 
             // Top Bar (Notificação, Local da Igreja Personalizável, Perfil do Servo)
             Row(
@@ -279,15 +302,34 @@ fun HomeScreenContent(
                 }
             }
 
-            // Headline
             Text(
-                "Acolhimento e\nCuidado Pastoral.",
-                fontSize = 28.sp,
+                text = "Olá, ${userNickname.trim().ifBlank { "usuário" }}!",
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextDark,
-                lineHeight = 34.sp,
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+                color = TextDark
             )
+
+            // Headline
+            Column(
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    "“Levai as cargas uns dos outros e assim cumprireis a lei de Cristo.”",
+                    fontSize = 20.sp,
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark,
+                    lineHeight = 24.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Gálatas 6:2",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Gold
+                )
+            }
 
             Spacer(Modifier.height(14.dp))
 
@@ -330,16 +372,16 @@ fun HomeScreenContent(
                     fontWeight = FontWeight.Bold,
                     color = TextDark
                 )
-                TextTextButton(text = "Ver Todos") { }
+                TextTextButton(text = "Ver Todos") { selectedSituationFilter = null }
             }
 
             Spacer(Modifier.height(12.dp))
 
             val categories = listOf(
-                CategoryItem("Primeira Vez", Icons.Default.Favorite, AppColors.Primary),
-                CategoryItem("Afastado(a)", Icons.Default.PersonSearch, Gold),
-                CategoryItem("Membro", Icons.Default.Groups, AppColors.Primary),
-                CategoryItem("Oração", Icons.Default.VolunteerActivism, Gold)
+                CategoryItem("Primeira Vez", Icons.Default.Favorite, AppColors.Primary, "PRIMEIRA_VEZ"),
+                CategoryItem("Afastado(a)", Icons.Default.PersonSearch, Gold, "AFASTADO"),
+                CategoryItem("Membro", Icons.Default.Groups, AppColors.Primary, "MEMBRO"),
+                CategoryItem("Grupo", Icons.Default.GroupWork, Gold, "GRUPO")
             )
 
             Row(
@@ -349,13 +391,25 @@ fun HomeScreenContent(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 categories.forEach { category ->
+                    val isSelected = category.situationFilter != null &&
+                        selectedSituationFilter == category.situationFilter
                     Card(
-                        onClick = onAttendanceClick,
+                        onClick = {
+                            val filter = category.situationFilter
+                            if (filter == null) {
+                                onAttendanceClick()
+                            } else {
+                                selectedSituationFilter =
+                                    if (isSelected) null else filter
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(96.dp),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) category.color.copy(alpha = 0.1f) else Color.White
+                        ),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {
                         Column(
@@ -435,8 +489,16 @@ fun HomeScreenContent(
                     }
                 }
                 is HomeUiState.Success -> {
-                    val attendances = (uiState).attendances
-                        .filter { searchQuery.isBlank() || it.nome.contains(searchQuery, ignoreCase = true) || it.maiorProblema.contains(searchQuery, ignoreCase = true) }
+                    val attendances = uiState.attendances.filter { item ->
+                        val matchesSearch = searchQuery.isBlank() ||
+                            item.nome.contains(searchQuery, ignoreCase = true) ||
+                            item.maiorProblema.contains(searchQuery, ignoreCase = true)
+                        val matchesSituation = selectedSituationFilter?.let { filter ->
+                            item.situacaoNaIgreja.any { it.matchesSituation(filter) }
+                        } ?: true
+
+                        matchesSearch && matchesSituation
+                    }
 
                     if (attendances.isEmpty()) {
                         Card(
@@ -530,7 +592,127 @@ fun HomeScreenContent(
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(28.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun UserProfileScreen(
+    nickname: String,
+    phone: String,
+    ministry: String,
+    onSave: (nickname: String, phone: String, ministry: String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var editedNickname by remember(nickname) { mutableStateOf(nickname) }
+    var editedPhone by remember(phone) { mutableStateOf(phone) }
+    var editedMinistry by remember(ministry) { mutableStateOf(ministry) }
+    var nicknameError by remember { mutableStateOf(false) }
+    var profileSaved by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(22.dp)
+    ) {
+        Text(
+            "Meu perfil",
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextDark
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Informe como você deseja ser identificado no aplicativo.",
+            fontSize = 14.sp,
+            color = TextMuted
+        )
+        Spacer(Modifier.height(22.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                OutlinedTextField(
+                    value = editedNickname,
+                    onValueChange = {
+                        editedNickname = it
+                        nicknameError = false
+                        profileSaved = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Nickname *") },
+                    placeholder = { Text("Como devemos chamar você?") },
+                    singleLine = true,
+                    isError = nicknameError,
+                    supportingText = if (nicknameError) {
+                        { Text("Informe seu nickname.") }
+                    } else {
+                        null
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = editedPhone,
+                    onValueChange = {
+                        editedPhone = it
+                        profileSaved = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Telefone / Celular") },
+                    placeholder = { Text("Ex.: 11999999999") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = editedMinistry,
+                    onValueChange = {
+                        editedMinistry = it
+                        profileSaved = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Função ou ministério") },
+                    placeholder = { Text("Ex.: Pastor, louvor, recepção") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(Modifier.height(18.dp))
+                Button(
+                    onClick = {
+                        val cleanNickname = editedNickname.trim()
+                        if (cleanNickname.isEmpty()) {
+                            nicknameError = true
+                            profileSaved = false
+                        } else {
+                            onSave(cleanNickname, editedPhone.trim(), editedMinistry.trim())
+                            editedNickname = cleanNickname
+                            editedPhone = editedPhone.trim()
+                            editedMinistry = editedMinistry.trim()
+                            profileSaved = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Salvar perfil")
+                }
+                if (profileSaved) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Perfil salvo neste dispositivo.",
+                        color = AppColors.Primary,
+                        fontSize = 13.sp
+                    )
+                }
+            }
         }
     }
 }
@@ -541,7 +723,13 @@ private fun AttendanceCard(
     onView: () -> Unit,
     onEdit: () -> Unit
 ) {
-    val mainTag = item.situacaoNaIgreja.firstOrNull() ?: "ATENDIMENTO"
+    val uriHandler = LocalUriHandler.current
+    val whatsAppNumber = item.telefone.toWhatsAppNumber()
+    val mainTag = if (item.nomeDoGrupo.isNotBlank()) {
+        "GRUPO: ${item.nomeDoGrupo.uppercase()}"
+    } else {
+        item.situacaoNaIgreja.firstOrNull() ?: "ATENDIMENTO"
+    }
     val locationDetail = listOf(item.bairro, item.endereco).filter { it.isNotBlank() }.joinToString(" - ")
         .ifEmpty { item.maiorProblema.ifEmpty { "Sem detalhes" } }
 
@@ -595,7 +783,7 @@ private fun AttendanceCard(
                     )
                 }
                 Text(
-                    text = item.dataAtendimento,
+                    text = item.dataAtendimento.toAttendanceDisplayDate(),
                     fontSize = 12.sp,
                     color = TextMuted
                 )
@@ -614,8 +802,47 @@ private fun AttendanceCard(
                 text = locationDetail,
                 fontSize = 13.sp,
                 color = TextMuted,
-                maxLines = 2
+                maxLines = 1
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Call,
+                    contentDescription = "Telefone",
+                    tint = TextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = item.telefone,
+                    fontSize = 13.sp,
+                    color = TextMuted,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    enabled = whatsAppNumber.isNotEmpty(),
+                    onClick = { uriHandler.openUri("https://wa.me/$whatsAppNumber") },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF25D366)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Call,
+                            contentDescription = "Abrir WhatsApp para ${item.nome}",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(14.dp))
 
@@ -646,11 +873,50 @@ private fun AttendanceCard(
     }
 }
 
+private fun String.toWhatsAppNumber(): String {
+    val digits = filter(Char::isDigit)
+    return if (digits.length == 10 || digits.length == 11) "55$digits" else digits
+}
+
 
 @Composable
 @Preview(showBackground = true)
 fun HomePreviewTest(){
-    HomeScreenContent()
+    HomeScreenContent(
+        uiState = HomeUiState.Success(listOf(
+            AttendanceItem(
+                id = "1",
+                nome = "João da Silva",
+                telefone = "(11) 91234-5678",
+                bairro = "Centro",
+                endereco = "Rua das Flores, 123",
+                maiorProblema = "Problema de saúde",
+                situacaoNaIgreja = listOf("MEMBRO"),
+                dataAtendimento = "2024-06-15",
+                fotoBase64 = "",
+                responsavelAcompanhamento = "Pastor José",
+                vistoDoPastor = "Visto",
+                email = "l",
+                cultosAFrequentar = ""
+            ),
+            AttendanceItem(
+                id = "2",
+                nome = "Maria Oliveira",
+                telefone = "(21) 98765-4321",
+                bairro = "Jardim América",
+                endereco = "Av. Brasil, 456",
+                maiorProblema = "Afastamento espiritual",
+                situacaoNaIgreja = listOf("AFASTADO"),
+                dataAtendimento = "2024-06-14",
+                fotoBase64 = "",
+                responsavelAcompanhamento = "",
+                vistoDoPastor = "Visto",
+                email = "l",
+                cultosAFrequentar = ""
+            )
+        )),
+
+    )
 }
 
 @Composable
@@ -667,5 +933,15 @@ private fun TextTextButton(text: String, onClick: () -> Unit) {
 private data class CategoryItem(
     val title: String,
     val icon: ImageVector,
-    val color: Color
+    val color: Color,
+    val situationFilter: String? = null
 )
+
+private fun String.matchesSituation(filter: String): Boolean {
+    fun normalize(value: String) = value.trim()
+        .replace(" ", "_")
+        .replace("-", "_")
+        .uppercase()
+
+    return normalize(this) == normalize(filter)
+}

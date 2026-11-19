@@ -18,7 +18,8 @@ data class AttendanceResponseDto(
     val vistoDoPastor: String? = "Pendente",
     val fotoBase64: String? = null,
     val foto: String? = null,
-    val fotoUrl: String? = null
+    val fotoUrl: String? = null,
+    val nomeDoGrupo: String? = null
 ) {
     val effectiveFotoBase64: String
         get() = fotoBase64 ?: foto ?: fotoUrl ?: ""

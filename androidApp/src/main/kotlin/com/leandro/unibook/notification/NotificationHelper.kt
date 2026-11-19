@@ -1,13 +1,17 @@
 package com.leandro.unibook.notification
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.leandro.unibook.MainActivity
 
 object NotificationHelper {
@@ -28,8 +32,24 @@ object NotificationHelper {
         }
     }
 
-    fun showReminderNotification(context: Context, id: Int, title: String, message: String) {
+    fun showReminderNotification(context: Context, id: Int, title: String, message: String): Boolean {
         createNotificationChannel(context)
+
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "Notification permission is not granted; reminder $id was not shown.")
+            return false
+        }
+
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            Log.w(TAG, "Notifications are disabled; reminder $id was not shown.")
+            return false
+        }
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -51,10 +71,14 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        try {
+        return try {
             NotificationManagerCompat.from(context).notify(id, notification)
-        } catch (_: SecurityException) {
-            // Permissão POST_NOTIFICATIONS não concedida
+            true
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Unable to show reminder notification $id.", e)
+            false
         }
     }
+
+    private const val TAG = "NotificationHelper"
 }

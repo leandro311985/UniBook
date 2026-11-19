@@ -24,6 +24,16 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
+val releaseSigningValues = listOf(
+    providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull,
+    providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orNull,
+    providers.environmentVariable("ANDROID_KEY_ALIAS").orNull,
+    providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
+)
+require(releaseSigningValues.all { it.isNullOrBlank() } || releaseSigningValues.all { !it.isNullOrBlank() }) {
+    "Set all release signing variables: ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
+}
+
 android {
     namespace = "com.leandro.unibook"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -35,6 +45,16 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+    signingConfigs {
+        if (releaseSigningValues.all { !it.isNullOrBlank() }) {
+            create("release") {
+                storeFile = file(releaseSigningValues[0]!!)
+                storePassword = releaseSigningValues[1]
+                keyAlias = releaseSigningValues[2]
+                keyPassword = releaseSigningValues[3]
+            }
+        }
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -43,6 +63,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
