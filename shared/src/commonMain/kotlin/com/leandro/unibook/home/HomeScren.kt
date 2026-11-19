@@ -32,15 +32,16 @@ import com.leandro.unibook.attendance.domain.model.AttendanceItem
 import com.leandro.unibook.attendance.domain.model.toAttendanceDisplayDate
 import com.leandro.unibook.attendance.presentation.ui.AttendancePhoto
 import com.leandro.unibook.attendance.presentation.ui.CameraPhotoPicker
+import com.leandro.unibook.home.presentation.FundoAzulComCurva
 import com.leandro.unibook.home.presentation.HomeUiState
 import com.leandro.unibook.home.presentation.HomeViewModel
 import com.leandro.unibook.ui.theme.AppColors
 import org.koin.compose.viewmodel.koinViewModel
 
-private val Gold = Color(0xFFE5A51B)
-private val LightBlue = Color(0xFFEFF4FF)
-private val TextDark = Color(0xFF1E293B)
-private val TextMuted = Color(0xFF64748B)
+private val Gold = AppColors.Accent
+private val LightBlue = AppColors.SurfaceSecondary
+private val TextDark = AppColors.TextPrimary
+private val TextMuted = AppColors.TextSecondary
 
 @Composable
 fun HomeScreen(
@@ -172,7 +173,7 @@ fun HomeScreenContent(
     }
 
     Scaffold(
-        containerColor = AppColors.Background,
+        containerColor = Color.Transparent,
         bottomBar = {
             NavigationBar(
                 containerColor = Color.White,
@@ -208,393 +209,396 @@ fun HomeScreenContent(
             }
         }
     ) { padding ->
-        if (selectedTab == 2) {
-            UserProfileScreen(
-                nickname = userNickname,
-                phone = userPhone,
-                ministry = userMinistry,
-                onSave = onSaveUserProfile,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-            ) {
-
-            // Top Bar (Notificação, Local da Igreja Personalizável, Perfil do Servo)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp, vertical = 18.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+        FundoAzulComCurva{
+            if (selectedTab == 2) {
+                UserProfileScreen(
+                    nickname = userNickname,
+                    phone = userPhone,
+                    ministry = userMinistry,
+                    onSave = onSaveUserProfile,
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White)
-                        .padding(4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            Icons.Outlined.Notifications,
-                            contentDescription = "Notificações",
-                            tint = TextDark
-                        )
-                    }
-                }
-
-                // Nome da Congregação (Clicável para personalizar)
+                        .fillMaxSize()
+                        .padding(padding)
+                )
+            } else {
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 14.dp)
-                        .clickable { showChurchModal = true }
+                        .fillMaxSize()
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Text(
-                        "Sua congregação",
-                        fontSize = 12.sp,
-                        color = TextMuted,
-                        fontWeight = FontWeight.Medium
-                    )
+
+                    // Top Bar (Notificação, Local da Igreja Personalizável, Perfil do Servo)
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            churchName,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextDark
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Personalizar igreja",
-                            tint = TextDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // Foto / Logo da Igreja (Clicável para personalizar)
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.Primary)
-                        .clickable { showChurchModal = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (churchPhotoBase64.isNotBlank()) {
-                        AttendancePhoto(
-                            photoBase64 = churchPhotoBase64,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Text("✝", color = Gold, fontSize = 24.sp)
-                    }
-                }
-            }
-
-            Text(
-                text = "Olá, ${userNickname.trim().ifBlank { "usuário" }}!",
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextDark
-            )
-
-            // Headline
-            Column(
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    "“Levai as cargas uns dos outros e assim cumprireis a lei de Cristo.”",
-                    fontSize = 20.sp,
-                    fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark,
-                    lineHeight = 24.sp
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "Gálatas 6:2",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Gold
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            // Campo de Busca
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                placeholder = {
-                    Text("Buscar atendimento, fiel ou visita...", color = Color.Gray, fontSize = 14.sp)
-                },
-                leadingIcon = {
-                    Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.Gray)
-                },
-                shape = RoundedCornerShape(30.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White,
-                    unfocusedBorderColor = Color(0xFFE2E8F0),
-                    focusedBorderColor = AppColors.Primary
-                )
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            // Seção: Tipos de Atendimento (Top Categories)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Tipos de Atendimento",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-                TextTextButton(text = "Ver Todos") { selectedSituationFilter = null }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            val categories = listOf(
-                CategoryItem("Primeira Vez", Icons.Default.Favorite, AppColors.Primary, "PRIMEIRA_VEZ"),
-                CategoryItem("Afastado(a)", Icons.Default.PersonSearch, Gold, "AFASTADO"),
-                CategoryItem("Membro", Icons.Default.Groups, AppColors.Primary, "MEMBRO"),
-                CategoryItem("Grupo", Icons.Default.GroupWork, Gold, "GRUPO")
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                categories.forEach { category ->
-                    val isSelected = category.situationFilter != null &&
-                        selectedSituationFilter == category.situationFilter
-                    Card(
-                        onClick = {
-                            val filter = category.situationFilter
-                            if (filter == null) {
-                                onAttendanceClick()
-                            } else {
-                                selectedSituationFilter =
-                                    if (isSelected) null else filter
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(96.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) category.color.copy(alpha = 0.1f) else Color.White
-                        ),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                category.icon,
-                                contentDescription = null,
-                                tint = category.color,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                category.title,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextDark
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(26.dp))
-
-            // Seção: Atendimentos Recentes (Buscados da API GET /api/atendimentos)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Atendimentos Recentes",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-                TextTextButton(text = "Atualizar", onClick = onRefresh)
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            when (uiState) {
-                HomeUiState.Loading -> {
-                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 22.dp, vertical = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(
-                            color = AppColors.Primary,
-                            modifier = Modifier.size(32.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(onClick = {}) {
+                                Icon(
+                                    Icons.Outlined.Notifications,
+                                    contentDescription = "Notificações",
+                                    tint = TextDark
+                                )
+                            }
+                        }
+
+                        // Nome da Congregação (Clicável para personalizar)
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 14.dp)
+                                .clickable { showChurchModal = true }
+                        ) {
+                            Text(
+                                "Sua congregação",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Medium
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    churchName,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Personalizar igreja",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Foto / Logo da Igreja (Clicável para personalizar)
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.Primary)
+                                .clickable { showChurchModal = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (churchPhotoBase64.isNotBlank()) {
+                                AttendancePhoto(
+                                    photoBase64 = churchPhotoBase64,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text("✝", color = Gold, fontSize = 24.sp)
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "Olá, ${userNickname.trim().ifBlank { "usuário" }}!",
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    // Headline
+                    Column(
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            "“Levai as cargas uns dos outros e assim cumprireis a lei de Cristo.”",
+                            fontSize = 20.sp,
+                            fontStyle = FontStyle.Italic,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            lineHeight = 24.sp
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Gálatas 6:2",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                     }
-                }
-                is HomeUiState.Error -> {
-                    Card(
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Campo de Busca
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-                        shape = RoundedCornerShape(16.dp)
+                        placeholder = {
+                            Text("Buscar atendimento, fiel ou visita...", color = Color.Gray, fontSize = 14.sp)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.Gray)
+                        },
+                        shape = RoundedCornerShape(30.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = Color.White,
+                            unfocusedBorderColor = Color(0xFFE2E8F0),
+                            focusedBorderColor = AppColors.Primary
+                        )
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // Seção: Tipos de Atendimento (Top Categories)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 22.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = uiState.message,
-                            color = Color(0xFFC62828),
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(16.dp)
+                            "Tipos de Atendimento",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
-                    }
-                }
-                is HomeUiState.Success -> {
-                    val attendances = uiState.attendances.filter { item ->
-                        val matchesSearch = searchQuery.isBlank() ||
-                            item.nome.contains(searchQuery, ignoreCase = true) ||
-                            item.maiorProblema.contains(searchQuery, ignoreCase = true)
-                        val matchesSituation = selectedSituationFilter?.let { filter ->
-                            item.situacaoNaIgreja.any { it.matchesSituation(filter) }
-                        } ?: true
-
-                        matchesSearch && matchesSituation
+                        TextTextButton(text = "Ver Todos") { selectedSituationFilter = null }
                     }
 
-                    if (attendances.isEmpty()) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(18.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                    Spacer(Modifier.height(12.dp))
+
+                    val categories = listOf(
+                        CategoryItem("Primeira Vez", Icons.Default.Favorite, AppColors.Primary, "PRIMEIRA_VEZ"),
+                        CategoryItem("Afastado(a)", Icons.Default.PersonSearch, Gold, "AFASTADO"),
+                        CategoryItem("Membro", Icons.Default.Groups, AppColors.Primary, "MEMBRO"),
+                        CategoryItem("Grupo", Icons.Default.GroupWork, Gold, "GRUPO")
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        categories.forEach { category ->
+                            val isSelected = category.situationFilter != null &&
+                                    selectedSituationFilter == category.situationFilter
+                            Card(
+                                onClick = {
+                                    val filter = category.situationFilter
+                                    if (filter == null) {
+                                        onAttendanceClick()
+                                    } else {
+                                        selectedSituationFilter =
+                                            if (isSelected) null else filter
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(96.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) category.color.copy(alpha = 0.1f) else Color.White
+                                ),
+                                elevation = CardDefaults.cardElevation(2.dp)
                             ) {
-                                Text(
-                                    "Nenhum atendimento registrado.",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = TextMuted
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Button(
-                                    onClick = onAttendanceClick,
-                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text("Cadastrar Atendimento", fontSize = 12.sp)
+                                    Icon(
+                                        category.icon,
+                                        contentDescription = null,
+                                        tint = category.color,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        category.title,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextDark
+                                    )
                                 }
                             }
                         }
-                    } else {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    }
+
+                    Spacer(Modifier.height(26.dp))
+
+                    // Seção: Atendimentos Recentes (Buscados da API GET /api/atendimentos)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 22.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Atendimentos Recentes",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        TextTextButton(text = "Atualizar", onClick = onRefresh)
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    when (uiState) {
+                        HomeUiState.Loading -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(140.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                        is HomeUiState.Error -> {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp),
+                                colors = CardDefaults.cardColors(containerColor = AppColors.ErrorContainer),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = uiState.message,
+                                    color = AppColors.Error,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+                        is HomeUiState.Success -> {
+                            val attendances = uiState.attendances.filter { item ->
+                                val matchesSearch = searchQuery.isBlank() ||
+                                        item.nome.contains(searchQuery, ignoreCase = true) ||
+                                        item.maiorProblema.contains(searchQuery, ignoreCase = true)
+                                val matchesSituation = selectedSituationFilter?.let { filter ->
+                                    item.situacaoNaIgreja.any { it.matchesSituation(filter) }
+                                } ?: true
+
+                                matchesSearch && matchesSituation
+                            }
+
+                            if (attendances.isEmpty()) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(18.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "Nenhum atendimento registrado.",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = TextMuted
+                                        )
+                                        Spacer(Modifier.height(8.dp))
+                                        Button(
+                                            onClick = onAttendanceClick,
+                                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
+                                        ) {
+                                            Text("Cadastrar Atendimento", fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                            } else {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(attendances) { item ->
+                                        AttendanceCard(
+                                            item = item,
+                                            onView = { onViewAttendance(item) },
+                                            onEdit = { onEditAttendance(item) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // Banner de Ação de Registro de Atendimento
+                    Card(
+                        onClick = onAttendanceClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColors.Primary)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            items(attendances) { item ->
-                                AttendanceCard(
-                                    item = item,
-                                    onView = { onViewAttendance(item) },
-                                    onEdit = { onEditAttendance(item) }
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Gold),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = AppColors.Primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+
+                            Spacer(Modifier.width(16.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Novo Atendimento",
+                                    color = Color.White,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Registre pessoas, orações e acolhimentos pastorais.",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 12.sp
                                 )
                             }
                         }
                     }
+
+                    Spacer(Modifier.height(28.dp))
                 }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Banner de Ação de Registro de Atendimento
-            Card(
-                onClick = onAttendanceClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Primary)
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Gold),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = null,
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Novo Atendimento",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Registre pessoas, orações e acolhimentos pastorais.",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-            }
-
-                Spacer(Modifier.height(28.dp))
             }
         }
+
     }
 }
 
@@ -621,13 +625,13 @@ private fun UserProfileScreen(
             "Meu perfil",
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
-            color = TextDark
+            color = Color.White
         )
         Spacer(Modifier.height(6.dp))
         Text(
             "Informe como você deseja ser identificado no aplicativo.",
             fontSize = 14.sp,
-            color = TextMuted
+            color = Color.White.copy(alpha = 0.85f)
         )
         Spacer(Modifier.height(22.dp))
 
@@ -925,7 +929,7 @@ private fun TextTextButton(text: String, onClick: () -> Unit) {
         text = text,
         fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
-        color = AppColors.Primary,
+        color = Color.White,
         modifier = Modifier.clickable { onClick() }
     )
 }
