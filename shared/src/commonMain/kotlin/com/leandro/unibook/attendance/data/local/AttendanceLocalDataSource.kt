@@ -90,16 +90,30 @@ class AttendanceLocalDataSource(
         }
     }
 
-    suspend fun markAsSynced(id: String, expectedEntity: AttendanceEntity): Boolean {
+    suspend fun replaceLocalIdWithRemoteId(oldLocalId: String, newRemoteId: String) {
+        mutex.withLock {
+            val current = _items.value.toMutableList()
+            val index = current.indexOfFirst { it.id == oldLocalId }
+            if (index >= 0) {
+                current[index] = current[index].copy(id = newRemoteId, syncStatus = SyncStatus.SYNCED)
+                _items.value = current
+                persistItemsLocked()
+            }
+        }
+    }
+
+    suspend fun markAsSynced(id: String, expectedEntity: AttendanceEntity? = null): Boolean {
         mutex.withLock {
             val current = _items.value.toMutableList()
             val index = current.indexOfFirst { it.id == id }
-            if (index < 0 || current[index] != expectedEntity) return false
+            if (index < 0) return false
 
-            if (expectedEntity.pendingOperation == PendingOperation.DELETE) {
+            val item = current[index]
+            val isDelete = expectedEntity?.pendingOperation == PendingOperation.DELETE || item.pendingOperation == PendingOperation.DELETE
+            if (isDelete) {
                 current.removeAt(index)
             } else {
-                current[index] = current[index].copy(syncStatus = SyncStatus.SYNCED)
+                current[index] = item.copy(syncStatus = SyncStatus.SYNCED)
             }
             _items.value = current
             persistItemsLocked()

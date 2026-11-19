@@ -61,10 +61,11 @@ fun HomeScreen(
         churchName = viewModel.churchName,
         churchPhotoBase64 = viewModel.churchPhotoBase64,
         userNickname = viewModel.userNickname,
+        userPhone = viewModel.userPhone,
         userMinistry = viewModel.userMinistry,
         onSaveChurch = { name, photo -> viewModel.updateChurchProfile(name, photo) },
-        onSaveUserProfile = { nickname, ministry ->
-            viewModel.updateUserProfile(nickname, ministry)
+        onSaveUserProfile = { nickname, phone, ministry ->
+            viewModel.updateUserProfile(nickname, phone, ministry)
         },
         onAttendanceClick = onAttendanceClick,
         onViewAttendance = onViewAttendance,
@@ -79,9 +80,10 @@ fun HomeScreenContent(
     churchName: String = "Igreja Central - Sede",
     churchPhotoBase64: String = "",
     userNickname: String = "",
+    userPhone: String = "",
     userMinistry: String = "",
     onSaveChurch: (name: String, photoBase64: String) -> Unit = { _, _ -> },
-    onSaveUserProfile: (nickname: String, ministry: String) -> Unit = { _, _ -> },
+    onSaveUserProfile: (nickname: String, phone: String, ministry: String) -> Unit = { _, _, _ -> },
     onAttendanceClick: () -> Unit = {},
     onViewAttendance: (AttendanceItem) -> Unit = {},
     onEditAttendance: (AttendanceItem) -> Unit = {},
@@ -209,6 +211,7 @@ fun HomeScreenContent(
         if (selectedTab == 2) {
             UserProfileScreen(
                 nickname = userNickname,
+                phone = userPhone,
                 ministry = userMinistry,
                 onSave = onSaveUserProfile,
                 modifier = Modifier
@@ -298,6 +301,14 @@ fun HomeScreenContent(
                     }
                 }
             }
+
+            Text(
+                text = "Olá, ${userNickname.trim().ifBlank { "usuário" }}!",
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextDark
+            )
 
             // Headline
             Column(
@@ -590,11 +601,13 @@ fun HomeScreenContent(
 @Composable
 private fun UserProfileScreen(
     nickname: String,
+    phone: String,
     ministry: String,
-    onSave: (nickname: String, ministry: String) -> Unit,
+    onSave: (nickname: String, phone: String, ministry: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editedNickname by remember(nickname) { mutableStateOf(nickname) }
+    var editedPhone by remember(phone) { mutableStateOf(phone) }
     var editedMinistry by remember(ministry) { mutableStateOf(ministry) }
     var nicknameError by remember { mutableStateOf(false) }
     var profileSaved by remember { mutableStateOf(false) }
@@ -646,6 +659,19 @@ private fun UserProfileScreen(
                 )
                 Spacer(Modifier.height(14.dp))
                 OutlinedTextField(
+                    value = editedPhone,
+                    onValueChange = {
+                        editedPhone = it
+                        profileSaved = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Telefone / Celular") },
+                    placeholder = { Text("Ex.: 11999999999") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(Modifier.height(14.dp))
+                OutlinedTextField(
                     value = editedMinistry,
                     onValueChange = {
                         editedMinistry = it
@@ -665,8 +691,9 @@ private fun UserProfileScreen(
                             nicknameError = true
                             profileSaved = false
                         } else {
-                            onSave(cleanNickname, editedMinistry.trim())
+                            onSave(cleanNickname, editedPhone.trim(), editedMinistry.trim())
                             editedNickname = cleanNickname
+                            editedPhone = editedPhone.trim()
                             editedMinistry = editedMinistry.trim()
                             profileSaved = true
                         }

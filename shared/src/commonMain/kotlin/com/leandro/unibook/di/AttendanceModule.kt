@@ -42,6 +42,7 @@ val attendanceModule = module {
     }
     single { AttendanceLocalDataSource(storageRepository = getOrNull()) }
     single { AttendanceApiService(client = get(), deviceIdProvider = getOrNull()) }
+    single { com.leandro.unibook.home.data.remote.UserApiService(client = get(), deviceIdProvider = getOrNull()) }
     single<AttendanceRepository> { AttendanceRepositoryImpl(apiService = get(), localDataSource = get()) }
     single { CreateAttendanceUseCase(repository = get()) }
     single { DeleteAttendanceUseCase(repository = get()) }
@@ -52,7 +53,8 @@ val attendanceModule = module {
         HomeViewModel(
             getAttendances = get(),
             churchSettingsRepository = getOrNull(),
-            userProfileRepository = getOrNull()
+            userProfileRepository = getOrNull(),
+            userApiService = getOrNull()
         )
     }
 }

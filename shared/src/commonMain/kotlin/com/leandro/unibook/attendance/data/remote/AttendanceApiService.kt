@@ -17,6 +17,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 
 class AttendanceApiService(
@@ -34,9 +35,9 @@ class AttendanceApiService(
         request: AttendanceRequestDto,
         fotoBytes: ByteArray? = null,
         deviceId: String? = null
-    ) {
+    ): AttendanceResponseDto? {
         val activeDeviceId = resolveDeviceId(deviceId)
-        client.submitFormWithBinaryData(
+        val response = client.submitFormWithBinaryData(
             url = "$baseUrl/api/atendimentos",
             formData = formData {
                 append("nome", request.nome)
@@ -50,33 +51,75 @@ class AttendanceApiService(
                 request.responsavelAcompanhamento?.let { append("responsavelAcompanhamento", it) }
                 append("dataAtendimento", request.dataAtendimento)
                 request.vistoDoPastor?.let { append("vistoDoPastor", it) }
-
-                request.fotoBase64?.let {
-                    append("fotoBase64", it)
-                    append("foto", it)
-                }
+                request.nomeDoGrupo?.let { append("nomeDoGrupo", it) }
 
                 if (fotoBytes != null && fotoBytes.isNotEmpty()) {
                     append("foto", fotoBytes, Headers.build {
                         append(HttpHeaders.ContentType, "image/jpeg")
                         append(HttpHeaders.ContentDisposition, "filename=\"foto.jpg\"")
                     })
+                } else {
+                    request.fotoBase64?.let {
+                        append("fotoBase64", it)
+                    }
                 }
             }
         ) {
             header("X-Device-Id", activeDeviceId)
         }
+        return try { response.body<AttendanceResponseDto>() } catch (_: Exception) { null }
     }
 
     suspend fun create(
         request: AttendanceRequestDto,
         deviceId: String? = null
-    ) {
+    ): AttendanceResponseDto? {
         val activeDeviceId = resolveDeviceId(deviceId)
-        client.post("$baseUrl/api/atendimentos") {
+        val response = client.post("$baseUrl/api/atendimentos") {
             contentType(ContentType.Application.Json)
             header("X-Device-Id", activeDeviceId)
             setBody(request)
+        }
+        return try { response.body<AttendanceResponseDto>() } catch (_: Exception) { null }
+    }
+
+    suspend fun updateMultipart(
+        id: String,
+        request: AttendanceRequestDto,
+        fotoBytes: ByteArray? = null,
+        deviceId: String? = null
+    ) {
+        val activeDeviceId = resolveDeviceId(deviceId)
+        client.submitFormWithBinaryData(
+            url = "$baseUrl/api/atendimentos/$id",
+            formData = formData {
+                append("nome", request.nome)
+                request.endereco?.let { append("endereco", it) }
+                request.bairro?.let { append("bairro", it) }
+                append("telefone", request.telefone)
+                request.email?.let { append("email", it) }
+                request.situacaoNaIgreja.forEach { append("situacaoNaIgreja", it) }
+                append("maiorProblema", request.maiorProblema)
+                request.cultosAFrequentar?.let { append("cultosAFrequentar", it) }
+                request.responsavelAcompanhamento?.let { append("responsavelAcompanhamento", it) }
+                append("dataAtendimento", request.dataAtendimento)
+                request.vistoDoPastor?.let { append("vistoDoPastor", it) }
+                request.nomeDoGrupo?.let { append("nomeDoGrupo", it) }
+
+                if (fotoBytes != null && fotoBytes.isNotEmpty()) {
+                    append("foto", fotoBytes, Headers.build {
+                        append(HttpHeaders.ContentType, "image/jpeg")
+                        append(HttpHeaders.ContentDisposition, "filename=\"foto.jpg\"")
+                    })
+                } else {
+                    request.fotoBase64?.let {
+                        append("fotoBase64", it)
+                    }
+                }
+            }
+        ) {
+            method = HttpMethod.Put
+            header("X-Device-Id", activeDeviceId)
         }
     }
 

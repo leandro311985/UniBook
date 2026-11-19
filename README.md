@@ -6,7 +6,8 @@ Aplicativo multiplataforma para registrar e acompanhar atendimentos pastorais. A
 
 - O app tem três áreas principais: lista de atendimentos, cadastro/edição e detalhes.
 - Os atendimentos são gravados localmente primeiro. A sincronização com a API é tentada em seguida; itens que não sincronizam permanecem pendentes para novas tentativas.
-- Os dados locais são persistidos como JSON nas preferências da plataforma: `SharedPreferences` no Android e `NSUserDefaults` no iOS. Não há banco de dados SQL neste momento.
+- Os dados de atendimento podem incluir informações pessoais e sensíveis sobre a vida religiosa e situações relatadas durante o acompanhamento; são enviados à API configurada quando há conexão.
+- Os atendimentos são persistidos como JSON local. No Android, preferências com dados do app são criptografadas com AES-GCM e uma chave do Android Keystore; dados antigos são migrados na primeira abertura. O backup Android está desativado. No iOS, os dados permanecem em `NSUserDefaults` sem criptografia adicional.
 - A aba **Perfil** permite salvar nickname e função/ministério no próprio dispositivo, com persistência via `SharedPreferences` no Android e `NSUserDefaults` no iOS.
 - A data inicial do cadastro e o atalho **Hoje** usam a data local do dispositivo. Ao editar, a data existente é mantida.
 - O agendamento de notificações de lembrete está implementado no Android com WorkManager. O código iOS atual não possui um fluxo equivalente de notificações.
@@ -46,7 +47,22 @@ O projeto inclui o Gradle Wrapper, portanto não é necessário instalar Gradle 
 
 Para iOS, abra `iosApp/iosApp.xcodeproj` no Xcode e execute o scheme `iosApp` em um simulador ou dispositivo compatível.
 
-O workflow de CI em `.github/workflows/ci.yml` executa `:shared:testAndroidHostTest` e `:androidApp:assembleDebug`.
+O workflow de CI em `.github/workflows/ci.yml` executa `:shared:testAndroidHostTest` e `:androidApp:assembleDebug`. Para publicar novos apps na Play Store, o projeto mira Android 16 (API 36) ou superior.
+
+A política de privacidade está em `docs/privacy-policy.html`. Para publicá-la, habilite GitHub Pages em **Settings > Pages** selecionando **GitHub Actions** como fonte; o workflow `.github/workflows/privacy-policy-pages.yml` publica a página em `https://leandro311985.github.io/UniBook/privacy-policy.html`. Use essa URL no Play Console após confirmar que a página está acessível.
+Como este repositório é privado, confirme que o plano GitHub permite publicar Pages a partir de repositórios privados; não altere a visibilidade do código apenas para hospedar a política.
+
+O mapeamento inicial para o formulário **Data safety** está em `docs/google-play-data-safety.md`; confirme retenção, logs, backups e provedores diretamente com quem opera a API antes de declarar os dados no Play Console.
+
+### Assinatura de release Android
+
+Crie uma chave de upload fora do repositório e mantenha uma cópia segura dela:
+
+```bash
+keytool -genkeypair -v -keystore unibook-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias unibook
+```
+
+Configure `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` no ambiente local ou como secrets protegidos no CI. Com as quatro variáveis definidas, `./gradlew :androidApp:bundleRelease` assina o AAB. Sem elas, o Gradle permite compilar um bundle não assinado para validação; esse arquivo não pode ser enviado à Play Store. Nunca versione o keystore ou as senhas. No Play Console, configure o Play App Signing e use a chave gerada como chave de upload.
 
 ## Estrutura do repositório
 
@@ -118,4 +134,3 @@ Esse fluxo é polling da API seguido de notificação local no Android, não pus
 - Ao adicionar uma API específica de plataforma, mantenha o `expect` em `commonMain` e os `actual` nos source sets de cada plataforma, no mesmo package.
 - Prefira adicionar novos valores de versão e bibliotecas ao catálogo `gradle/libs.versions.toml`.
 - A URL do backend está atualmente definida nos arquivos Kotlin por plataforma; não há configuração de ambiente separada no projeto.
-- O workflow CI instala Android SDK API 35/build-tools 35.0.0, enquanto o catálogo do projeto declara `compileSdk` API 37. Se a compilação no CI começar a falhar por falta da plataforma 37, alinhe a instalação do workflow com `android-compileSdk`.

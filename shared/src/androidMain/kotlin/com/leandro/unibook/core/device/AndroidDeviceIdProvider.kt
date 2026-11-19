@@ -1,6 +1,7 @@
 package com.leandro.unibook.core.device
 
 import android.content.Context
+import com.leandro.unibook.core.security.SecurePreferences
 import java.util.UUID
 
 class AndroidDeviceIdProvider(
@@ -8,12 +9,16 @@ class AndroidDeviceIdProvider(
 ) : DeviceIdProvider {
 
     override fun getDeviceId(): String {
-        val prefs = context.getSharedPreferences("unibook_device_prefs", Context.MODE_PRIVATE)
-        var deviceId = prefs.getString("KEY_DEVICE_ID", null)
+        val prefs = SecurePreferences(context, "unibook_device_prefs")
+        var deviceId = prefs.getString(KEY_DEVICE_ID)
         if (deviceId.isNullOrBlank()) {
             deviceId = UUID.randomUUID().toString()
-            prefs.edit().putString("KEY_DEVICE_ID", deviceId).apply()
+            prefs.putString(KEY_DEVICE_ID, deviceId)
         }
         return deviceId
+    }
+
+    private companion object {
+        const val KEY_DEVICE_ID = "KEY_DEVICE_ID"
     }
 }

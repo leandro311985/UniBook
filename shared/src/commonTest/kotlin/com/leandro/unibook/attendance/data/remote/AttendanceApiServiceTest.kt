@@ -62,7 +62,7 @@ class AttendanceApiServiceTest {
             sentBody.contentType.toString()
         )
         assertEquals(
-            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente","fotoBase64":"dGVzdA==","foto":"dGVzdA=="}""",
+            """{"nome":"Maria Silva","endereco":null,"bairro":null,"telefone":"11999999999","email":null,"situacaoNaIgreja":["PRIMEIRA_VEZ"],"maiorProblema":"Está passando por dificuldades","cultosAFrequentar":null,"responsavelAcompanhamento":null,"dataAtendimento":"2026-11-07","vistoDoPastor":"Pendente","fotoBase64":"dGVzdA==","foto":"dGVzdA==","nomeDoGrupo":null}""",
             sentBody.text
         )
     }
