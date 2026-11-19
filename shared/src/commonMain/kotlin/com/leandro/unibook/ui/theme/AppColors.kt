@@ -1,30 +1,50 @@
 package com.leandro.unibook.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.lightColorScheme
 
 /**
  * Cores centralizadas do aplicativo.
  * Altere a cor [Primary] aqui para atualizar o tema em todo o aplicativo!
  */
 object AppColors {
-    // Cor Principal do App (Azul Marinho / Navy Blue #000080)
-    val Primary = Color(0xFF000080)
-    
-    // Cor usada nos elementos gráficos do padrão do cabeçalho
-    val HeaderPattern = Color(0xFF1F1F9E)
-    
-    // Cores de Superfície e Fundo
-    val Background = Color(0xFFD6E5F2)
+    val Primary = Color(0xFF13315C)
+    val HeaderPattern = Color(0xFF244A78)
+    val Background = Primary
     val CardBackground = Color(0xFFFFFFFF)
-    val InputBackground = Color(0xFFF7F7F9)
-    val InputBorder = Color(0xFFEEEEEE)
-    
-    // Cores de Texto
-    val TextPrimary = Color(0xFF141414)
-    val TextSecondary = Color(0xFF6E6E6E)
-    val TextPlaceholder = Color(0xFFA0A0A0)
+    val SurfaceSecondary = Color(0xFFEAF1F8)
+    val InputBackground = CardBackground
+    val InputBorder = Color(0xFFCBD5E1)
+
+    val TextPrimary = Color(0xFF1E293B)
+    val TextSecondary = Color(0xFF64748B)
+    val TextPlaceholder = Color(0xFF64748B)
     val TextOnPrimary = Color(0xFFFFFFFF)
-    
-    // Links / Destaques
+
+    val Accent = Color(0xFFF2B84B)
+    val Success = Color(0xFF237A4B)
+    val SuccessContainer = Color(0xFFEAF5EE)
+    val Error = Color(0xFFB42318)
+    val ErrorContainer = Color(0xFFFEE4E2)
     val ActionText = Primary
+
+    val ColorScheme = lightColorScheme(
+        primary = Primary,
+        onPrimary = TextOnPrimary,
+        secondary = Accent,
+        onSecondary = Primary,
+        tertiary = HeaderPattern,
+        onTertiary = TextOnPrimary,
+        background = Background,
+        onBackground = TextPrimary,
+        surface = CardBackground,
+        onSurface = TextPrimary,
+        surfaceVariant = SurfaceSecondary,
+        onSurfaceVariant = TextSecondary,
+        error = Error,
+        onError = TextOnPrimary,
+        errorContainer = ErrorContainer,
+        onErrorContainer = Error,
+        outline = InputBorder
+    )
 }
