@@ -56,13 +56,13 @@ O mapeamento inicial para o formulário **Data safety** está em `docs/google-pl
 
 ### Assinatura de release Android
 
-Crie uma chave de upload fora do repositório e mantenha uma cópia segura dela:
+Crie uma chave de upload fora do repositório e mantenha uma cópia segura dela. Para este projeto, o armazenamento da chave é PKCS12:
 
 ```bash
-keytool -genkeypair -v -keystore unibook-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias unibook
+keytool -genkeypair -v -keystore "$HOME/.android/keystores/unibook-upload.p12" -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 -alias unibook
 ```
 
-Configure `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` no ambiente local ou como secrets protegidos no CI. Com as quatro variáveis definidas, `./gradlew :androidApp:bundleRelease` assina o AAB. Sem elas, o Gradle permite compilar um bundle não assinado para validação; esse arquivo não pode ser enviado à Play Store. Nunca versione o keystore ou as senhas. No Play Console, configure o Play App Signing e use a chave gerada como chave de upload.
+Configure `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` no ambiente local ou como secrets protegidos no CI. Localmente, também é possível configurar `unibook.signing.storeFile`, `unibook.signing.storePassword`, `unibook.signing.keyAlias` e `unibook.signing.keyPassword` no arquivo privado `~/.gradle/gradle.properties`. Com as quatro configurações definidas, `./gradlew :androidApp:bundleRelease` assina o AAB. Sem elas, o Gradle permite compilar um bundle não assinado para validação; esse arquivo não pode ser enviado à Play Store. Nunca versione o keystore ou as senhas. No Play Console, configure o Play App Signing e use a chave gerada como chave de upload.
 
 ## Estrutura do repositório
 

@@ -24,14 +24,19 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
+fun signingValue(property: String, environmentVariable: String) =
+    providers.gradleProperty(property)
+        .orElse(providers.environmentVariable(environmentVariable))
+        .orNull
+
 val releaseSigningValues = listOf(
-    providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull,
-    providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orNull,
-    providers.environmentVariable("ANDROID_KEY_ALIAS").orNull,
-    providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
+    signingValue("unibook.signing.storeFile", "ANDROID_KEYSTORE_PATH"),
+    signingValue("unibook.signing.storePassword", "ANDROID_KEYSTORE_PASSWORD"),
+    signingValue("unibook.signing.keyAlias", "ANDROID_KEY_ALIAS"),
+    signingValue("unibook.signing.keyPassword", "ANDROID_KEY_PASSWORD")
 )
 require(releaseSigningValues.all { it.isNullOrBlank() } || releaseSigningValues.all { !it.isNullOrBlank() }) {
-    "Set all release signing variables: ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
+    "Set all release signing properties (unibook.signing.*) or environment variables: ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
 }
 
 android {

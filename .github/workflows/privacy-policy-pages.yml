@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - feature/Home
     paths:
       - "docs/privacy-policy.html"
       - ".github/workflows/privacy-policy-pages.yml"

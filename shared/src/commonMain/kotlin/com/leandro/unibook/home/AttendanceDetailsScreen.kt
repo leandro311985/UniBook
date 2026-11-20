@@ -132,7 +132,12 @@ fun AttendanceDetailsScreen(
                         Icon(Icons.Default.Edit, contentDescription = "Editar ficha")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppColors.Primary,
+                    titleContentColor = AppColors.TextOnPrimary,
+                    navigationIconContentColor = AppColors.TextOnPrimary,
+                    actionIconContentColor = AppColors.TextOnPrimary
+                )
             )
         }
     ) { padding ->
