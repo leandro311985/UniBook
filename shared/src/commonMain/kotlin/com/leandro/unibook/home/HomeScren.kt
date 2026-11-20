@@ -42,6 +42,7 @@ private val Gold = AppColors.Accent
 private val LightBlue = AppColors.SurfaceSecondary
 private val TextDark = AppColors.TextPrimary
 private val TextMuted = AppColors.TextSecondary
+private const val PRIVACY_POLICY_URL = "https://leandro311985.github.io/UniBook/privacy-policy.html"
 
 @Composable
 fun HomeScreen(
@@ -610,6 +611,7 @@ private fun UserProfileScreen(
     onSave: (nickname: String, phone: String, ministry: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val uriHandler = LocalUriHandler.current
     var editedNickname by remember(nickname) { mutableStateOf(nickname) }
     var editedPhone by remember(phone) { mutableStateOf(phone) }
     var editedMinistry by remember(ministry) { mutableStateOf(ministry) }
@@ -715,6 +717,12 @@ private fun UserProfileScreen(
                         color = AppColors.Primary,
                         fontSize = 13.sp
                     )
+                }
+                TextButton(
+                    onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Política de Privacidade")
                 }
             }
         }
