@@ -181,24 +181,20 @@ class AttendanceRepositoryImpl(
                             val dto = item.toRequestDto()
                             val photoBytes = decodePhotoBytes(item.fotoBase64)
 
-                            val created = try {
-                                if (photoBytes != null && photoBytes.isNotEmpty()) {
-                                    apiService.createMultipart(
-                                        request = dto,
-                                        fotoBytes = photoBytes
-                                    )
-                                } else {
-                                    apiService.create(request = dto)
-                                }
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
+                            val created = if (photoBytes != null && photoBytes.isNotEmpty()) {
+                                apiService.createMultipart(
+                                    request = dto,
+                                    fotoBytes = photoBytes
+                                )
+                            } else {
                                 apiService.create(request = dto)
                             }
 
                             if (!created?.id.isNullOrBlank()) {
                                 localDataSource.replaceLocalIdWithRemoteId(item.id, created.id)
+                                syncedCount++
                             } else {
-                                localDataSource.markAsSynced(item.id, item)
+                                println("Sincronização de criação falhou para atendimento ${item.id}. Mantendo como pendente.")
                             }
                         }
                         PendingOperation.UPDATE -> {
@@ -206,34 +202,26 @@ class AttendanceRepositoryImpl(
                             val photoBytes = decodePhotoBytes(item.fotoBase64)
 
                             if (item.id.startsWith("local_")) {
-                                val created = try {
-                                    if (photoBytes != null && photoBytes.isNotEmpty()) {
-                                        apiService.createMultipart(request = dto, fotoBytes = photoBytes)
-                                    } else {
-                                        apiService.create(request = dto)
-                                    }
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
+                                val created = if (photoBytes != null && photoBytes.isNotEmpty()) {
+                                    apiService.createMultipart(request = dto, fotoBytes = photoBytes)
+                                } else {
                                     apiService.create(request = dto)
                                 }
 
                                 if (!created?.id.isNullOrBlank()) {
                                     localDataSource.replaceLocalIdWithRemoteId(item.id, created.id)
+                                    syncedCount++
                                 } else {
-                                    localDataSource.markAsSynced(item.id, item)
+                                    println("Sincronização de criação (update local) falhou para ${item.id}. Mantendo como pendente.")
                                 }
                             } else {
-                                try {
-                                    if (photoBytes != null && photoBytes.isNotEmpty()) {
-                                        apiService.updateMultipart(id = item.id, request = dto, fotoBytes = photoBytes)
-                                    } else {
-                                        apiService.update(id = item.id, request = dto)
-                                    }
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
+                                if (photoBytes != null && photoBytes.isNotEmpty()) {
+                                    apiService.updateMultipart(id = item.id, request = dto, fotoBytes = photoBytes)
+                                } else {
                                     apiService.update(id = item.id, request = dto)
                                 }
                                 localDataSource.markAsSynced(item.id, item)
+                                syncedCount++
                             }
                         }
                         PendingOperation.DELETE -> {
@@ -241,10 +229,9 @@ class AttendanceRepositoryImpl(
                                 apiService.delete(id = item.id)
                             }
                             localDataSource.markAsSynced(item.id, item)
+                            syncedCount++
                         }
                     }
-
-                    syncedCount++
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

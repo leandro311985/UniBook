@@ -14,13 +14,23 @@ import kotlinx.coroutines.launch
 
 class AttendanceViewModel(
     private val createAttendance: CreateAttendanceUseCase,
-    private val updateAttendance: UpdateAttendanceUseCase
+    private val updateAttendance: UpdateAttendanceUseCase,
+    private val repository: com.leandro.unibook.attendance.domain.repository.AttendanceRepository? = null
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AttendanceUiState>(AttendanceUiState.Idle)
     val uiState: StateFlow<AttendanceUiState> = _uiState.asStateFlow()
 
     fun resetState() {
         _uiState.value = AttendanceUiState.Idle
+    }
+
+    fun prewarmApi() {
+        viewModelScope.launch {
+            try {
+                repository?.syncPending()
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun save(params: AttendanceParams, attendanceId: String? = null) {

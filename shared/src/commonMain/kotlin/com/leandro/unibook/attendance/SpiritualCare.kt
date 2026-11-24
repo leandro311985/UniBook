@@ -49,9 +49,10 @@ fun FormScreen(
     val viewModel: AttendanceViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    // Reseta o ViewModel ao entrar na tela
+    // Reseta o ViewModel e pré-aquece a API/sincronia ao entrar na tela
     LaunchedEffect(attendance) {
         viewModel.resetState()
+        viewModel.prewarmApi()
     }
 
     AttendanceScreen(

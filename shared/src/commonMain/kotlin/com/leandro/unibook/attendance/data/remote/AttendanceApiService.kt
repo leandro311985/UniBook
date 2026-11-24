@@ -37,37 +37,41 @@ class AttendanceApiService(
         deviceId: String? = null
     ): AttendanceResponseDto? {
         val activeDeviceId = resolveDeviceId(deviceId)
-        val response = client.submitFormWithBinaryData(
-            url = "$baseUrl/api/atendimentos",
-            formData = formData {
-                append("nome", request.nome)
-                request.endereco?.let { append("endereco", it) }
-                request.bairro?.let { append("bairro", it) }
-                append("telefone", request.telefone)
-                request.email?.let { append("email", it) }
-                request.situacaoNaIgreja.forEach { append("situacaoNaIgreja", it) }
-                append("maiorProblema", request.maiorProblema)
-                request.cultosAFrequentar?.let { append("cultosAFrequentar", it) }
-                request.responsavelAcompanhamento?.let { append("responsavelAcompanhamento", it) }
-                append("dataAtendimento", request.dataAtendimento)
-                request.vistoDoPastor?.let { append("vistoDoPastor", it) }
-                request.nomeDoGrupo?.let { append("nomeDoGrupo", it) }
+        return try {
+            val response = client.submitFormWithBinaryData(
+                url = "$baseUrl/api/atendimentos",
+                formData = formData {
+                    append("nome", request.nome)
+                    request.endereco?.let { append("endereco", it) }
+                    request.bairro?.let { append("bairro", it) }
+                    append("telefone", request.telefone)
+                    request.email?.let { append("email", it) }
+                    request.situacaoNaIgreja.forEach { append("situacaoNaIgreja", it) }
+                    append("maiorProblema", request.maiorProblema)
+                    request.cultosAFrequentar?.let { append("cultosAFrequentar", it) }
+                    request.responsavelAcompanhamento?.let { append("responsavelAcompanhamento", it) }
+                    append("dataAtendimento", request.dataAtendimento)
+                    request.vistoDoPastor?.let { append("vistoDoPastor", it) }
+                    request.nomeDoGrupo?.let { append("nomeDoGrupo", it) }
 
-                if (fotoBytes != null && fotoBytes.isNotEmpty()) {
-                    append("foto", fotoBytes, Headers.build {
-                        append(HttpHeaders.ContentType, "image/jpeg")
-                        append(HttpHeaders.ContentDisposition, "filename=\"foto.jpg\"")
-                    })
-                } else {
-                    request.fotoBase64?.let {
-                        append("fotoBase64", it)
+                    if (fotoBytes != null && fotoBytes.isNotEmpty()) {
+                        append("foto", fotoBytes, Headers.build {
+                            append(HttpHeaders.ContentType, "image/jpeg")
+                            append(HttpHeaders.ContentDisposition, "filename=\"foto.jpg\"")
+                        })
+                    } else {
+                        request.fotoBase64?.let {
+                            append("fotoBase64", it)
+                        }
                     }
                 }
+            ) {
+                header("X-Device-Id", activeDeviceId)
             }
-        ) {
-            header("X-Device-Id", activeDeviceId)
+            response.body<AttendanceResponseDto>()
+        } catch (_: Exception) {
+            null
         }
-        return try { response.body<AttendanceResponseDto>() } catch (_: Exception) { null }
     }
 
     suspend fun create(
@@ -75,12 +79,16 @@ class AttendanceApiService(
         deviceId: String? = null
     ): AttendanceResponseDto? {
         val activeDeviceId = resolveDeviceId(deviceId)
-        val response = client.post("$baseUrl/api/atendimentos") {
-            contentType(ContentType.Application.Json)
-            header("X-Device-Id", activeDeviceId)
-            setBody(request)
+        return try {
+            val response = client.post("$baseUrl/api/atendimentos") {
+                contentType(ContentType.Application.Json)
+                header("X-Device-Id", activeDeviceId)
+                setBody(request)
+            }
+            response.body<AttendanceResponseDto>()
+        } catch (_: Exception) {
+            null
         }
-        return try { response.body<AttendanceResponseDto>() } catch (_: Exception) { null }
     }
 
     suspend fun updateMultipart(
@@ -171,6 +179,17 @@ class AttendanceApiService(
         val activeDeviceId = resolveDeviceId(deviceId)
         client.post("$baseUrl/api/atendimentos/$id/lembrete/concluir") {
             header("X-Device-Id", activeDeviceId)
+        }
+    }
+
+    suspend fun ping(): Boolean {
+        return try {
+            client.get("$baseUrl/api/atendimentos") {
+                header("X-Device-Id", resolveDeviceId(null))
+            }
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 }
