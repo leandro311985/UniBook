@@ -7,6 +7,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leandro.unibook.attendance.domain.model.AttendanceParams
@@ -334,8 +336,8 @@ fun AttendanceScreen(
                     FormInput("Nome completo *", name, { name = it }, placeholder = "Ex: Maria Silva")
                     FormInput("Endereço", address, { address = it }, placeholder = "Ex: Rua das Flores, 123")
                     FormInput("Bairro", neighborhood, { neighborhood = it }, placeholder = "Ex: Centro")
-                    FormInput("Telefone / Celular *", phone, { phone = it }, placeholder = "Ex: 11999999999")
-                    FormInput("E-mail", email, { email = it }, placeholder = "Ex: maria@example.com")
+                    FormInput("Telefone / Celular *", phone, { phone = it }, placeholder = "Ex: 11999999999",keyboardType = KeyboardType.Phone)
+                    FormInput("E-mail", email, { email = it }, placeholder = "Ex: maria@example.com",keyboardType = KeyboardType.Email)
                 }
 
                 // SITUAÇÃO NA IGREJA
@@ -470,7 +472,8 @@ private fun FormInput(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String = "Digite aqui"
+    placeholder: String = "Digite aqui",
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Column(
         modifier = Modifier
@@ -494,7 +497,10 @@ private fun FormInput(
                 Text(placeholder, fontSize = 14.sp)
             },
             singleLine = true,
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(10.dp),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType
+            )
         )
     }
 }
