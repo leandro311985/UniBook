@@ -35,7 +35,7 @@ val attendanceModule = module {
             }
             install(HttpRequestRetry) {
                 maxRetries = 3
-                retryIf { _, response -> !response.status.value.let { it in 200..299 } }
+                retryOnExceptionOrServerErrors(maxRetries = 3)
                 exponentialDelay()
             }
         }
@@ -48,7 +48,7 @@ val attendanceModule = module {
     single { DeleteAttendanceUseCase(repository = get()) }
     single { UpdateAttendanceUseCase(repository = get()) }
     single { GetAttendancesUseCase(repository = get()) }
-    factory { AttendanceViewModel(createAttendance = get(), updateAttendance = get()) }
+    factory { AttendanceViewModel(createAttendance = get(), updateAttendance = get(), repository = get()) }
     factory {
         HomeViewModel(
             getAttendances = get(),

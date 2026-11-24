@@ -32,8 +32,9 @@ class MainActivity : ComponentActivity() {
 
         requestNotificationPermissionIfNeeded()
 
-        // Agendamento periódico de lembretes em background
+        // Agendamento periódico de lembretes e sincronização em background
         ReminderScheduler.schedulePeriodicReminders(this@MainActivity)
+        ReminderScheduler.schedulePeriodicSync(this@MainActivity)
 
         setContent {
             App()
