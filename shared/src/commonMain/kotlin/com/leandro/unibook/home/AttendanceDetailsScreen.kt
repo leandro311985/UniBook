@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,12 +54,19 @@ private val PaperBg = AppColors.CardBackground
 
 @Composable
 fun AttendanceDetailsScreen(
-    attendance: AttendanceItem,
+    attendances: List<AttendanceItem>,
+    initialAttendance: AttendanceItem,
     onBack: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: suspend () -> AttendanceResult = { AttendanceResult.Success },
+    onEdit: (AttendanceItem) -> Unit,
+    onDelete: suspend (AttendanceItem) -> AttendanceResult = { AttendanceResult.Success },
     onDeleted: () -> Unit = {}
 ) {
+    val initialIndex = remember(attendances, initialAttendance) {
+        attendances.indexOfFirst { it.id == initialAttendance.id }.let { if (it >= 0) it else 0 }
+    }
+    val pagerState = rememberPagerState(initialPage = initialIndex) { attendances.size }
+    val currentAttendance = attendances.getOrNull(pagerState.currentPage) ?: initialAttendance
+
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
@@ -70,7 +80,7 @@ fun AttendanceDetailsScreen(
             title = { Text("Excluir atendimento?") },
             text = {
                 Text(
-                    deleteError ?: "O atendimento de ${attendance.nome} será removido do app e do servidor.",
+                    deleteError ?: "O atendimento de ${currentAttendance.nome} será removido do app e do servidor.",
                     textAlign = TextAlign.Start
                 )
             },
@@ -80,7 +90,7 @@ fun AttendanceDetailsScreen(
                     onClick = {
                         scope.launch {
                             isDeleting = true
-                            when (val result = onDelete()) {
+                            when (val result = onDelete(currentAttendance)) {
                                 AttendanceResult.Success -> onDeleted()
                                 is AttendanceResult.Error -> {
                                     deleteError = result.message
@@ -113,7 +123,7 @@ fun AttendanceDetailsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Ficha de Atendimento", fontWeight = FontWeight.Bold)
+                    Text("Ficha de Atendimento (${pagerState.currentPage + 1}/${attendances.size})", fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -128,7 +138,7 @@ fun AttendanceDetailsScreen(
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
-                    IconButton(onClick = onEdit) {
+                    IconButton(onClick = { onEdit(currentAttendance) }) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar ficha")
                     }
                 },
@@ -141,187 +151,218 @@ fun AttendanceDetailsScreen(
             )
         }
     ) { padding ->
-        FundoAzulComCurva{
+        FundoAzulComCurva {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(vertical = 16.dp, horizontal = 10.dp)
+                    .padding(vertical = 16.dp, horizontal = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // CADERNO PAUTADO COM ESPIRAL
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = PaperBg),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                ) {
-                    Row(
+                // PAGER DE FICHA ESTILO CADERNO COM ANIMAÇÃO DE FOLHA
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    pageSpacing = 16.dp
+                ) { page ->
+                    val attendance = attendances[page]
+                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(IntrinsicSize.Min)
+                            .wrapContentHeight()
+                            .graphicsLayer {
+                                // Efeito 3D de virar folha de caderno (rotação Y + escala + alpha)
+                                val rot = pageOffset * 35f
+                                rotationY = rot
+                                cameraDistance = 12f * density
+                                val scale = kotlin.math.max(0.85f, 1f - kotlin.math.abs(pageOffset) * 0.15f)
+                                scaleX = scale
+                                scaleY = scale
+                                alpha = kotlin.math.max(0.4f, 1f - kotlin.math.abs(pageOffset) * 0.6f)
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = PaperBg),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                     ) {
-                        // ESPIRAL DO CADERNO (LADO ESQUERDO)
-                        SpiralBinding(
+                        Row(
                             modifier = Modifier
-                                .fillMaxHeight()
-                                .width(26.dp)
-                        )
-
-                        // PÁGINA PAUTADA DO ATENDIMENTO
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(top = 18.dp, end = 16.dp, bottom = 20.dp, start = 6.dp)
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min)
                         ) {
-                            // CABEÇALHO DO CADERNO: TÍTULO E FOTO
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "ATENDIMENTO",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = PaperBlue
-                                )
+                            // ESPIRAL DO CADERNO (LADO ESQUERDO)
+                            SpiralBinding(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(26.dp)
+                            )
 
-                                // MOLDURA DA FOTO 3x4 FIXADA NO CADERNO
-                                Box(
-                                    modifier = Modifier
-                                        .size(width = 70.dp, height = 82.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFFF0F4F8))
-                                        .border(2.dp, PaperBlue, RoundedCornerShape(8.dp)),
-                                    contentAlignment = Alignment.Center
+                            // PÁGINA PAUTADA DO ATENDIMENTO
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(top = 18.dp, end = 16.dp, bottom = 20.dp, start = 6.dp)
+                            ) {
+                                // CABEÇALHO DO CADERNO: TÍTULO E FOTO
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (attendance.fotoBase64.isNotBlank()) {
-                                        AttendancePhoto(
-                                            photoBase64 = attendance.fotoBase64,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    } else {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center,
-                                            modifier = Modifier.padding(2.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Person,
-                                                contentDescription = "Foto da Pessoa",
-                                                tint = PaperBlue.copy(alpha = 0.5f),
-                                                modifier = Modifier.size(28.dp)
+                                    Text(
+                                        text = "ATENDIMENTO",
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = PaperBlue
+                                    )
+
+                                    // MOLDURA DA FOTO 3x4 FIXADA NO CADERNO
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 70.dp, height = 82.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFFF0F4F8))
+                                            .border(2.dp, PaperBlue, RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (attendance.fotoBase64.isNotBlank()) {
+                                            AttendancePhoto(
+                                                photoBase64 = attendance.fotoBase64,
+                                                modifier = Modifier.fillMaxSize()
                                             )
-                                            Spacer(Modifier.height(2.dp))
-                                            Text(
-                                                "FOTO 3x4",
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = PaperBlue.copy(alpha = 0.5f)
-                                            )
+                                        } else {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center,
+                                                modifier = Modifier.padding(2.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Person,
+                                                    contentDescription = "Foto da Pessoa",
+                                                    tint = PaperBlue.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                                Spacer(Modifier.height(2.dp))
+                                                Text(
+                                                    "FOTO 3x4",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = PaperBlue.copy(alpha = 0.5f)
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(16.dp))
 
-                            // CAMPOS FORMULÁRIO ESTILO CADERNO IMPRESSO
-                            NotebookLinedField(label = "Nome:", value = attendance.nome)
-                            NotebookLinedField(label = "Endereço:", value = attendance.endereco)
-                            NotebookLinedField(label = "Bairro:", value = attendance.bairro)
-                            NotebookLinedField(label = "Email:", value = attendance.email)
-                            NotebookLinedField(label = "Tel:", value = attendance.telefone)
+                                // CAMPOS FORMULÁRIO ESTILO CADERNO IMPRESSO
+                                NotebookLinedField(label = "Nome:", value = attendance.nome)
+                                NotebookLinedField(label = "Endereço:", value = attendance.endereco)
+                                NotebookLinedField(label = "Bairro:", value = attendance.bairro)
+                                NotebookLinedField(label = "Email:", value = attendance.email)
+                                NotebookLinedField(label = "Tel:", value = attendance.telefone)
 
-                            // SITUAÇÃO NA IGREJA (CHECKBOXES)
-                            Spacer(Modifier.height(6.dp))
-                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                Text(
-                                    "Situação na Igreja:",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = PaperBlue
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    val statusList = attendance.situacaoNaIgreja.map { it.uppercase() }
-
-                                    NotebookCheck(
-                                        label = "1ª Vez",
-                                        checked = statusList.contains("PRIMEIRA_VEZ") || statusList.contains("PRIMEIRA VEZ")
+                                // SITUAÇÃO NA IGREJA (CHECKBOXES)
+                                Spacer(Modifier.height(6.dp))
+                                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                    Text(
+                                        "Situação na Igreja:",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = PaperBlue
                                     )
-                                    NotebookCheck(
-                                        label = "Afastado",
-                                        checked = statusList.contains("AFASTADO")
-                                    )
-                                    NotebookCheck(
-                                        label = "Membro",
-                                        checked = statusList.contains("MEMBRO")
-                                    )
-                                    NotebookCheck(
-                                        label = "Grupo",
-                                        checked = statusList.contains("GRUPO")
-                                    )
-                                }
-                                if (attendance.nomeDoGrupo.isNotBlank()) {
                                     Spacer(Modifier.height(4.dp))
-                                    NotebookLinedField(label = "Nome do Grupo:", value = attendance.nomeDoGrupo)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        val statusList = attendance.situacaoNaIgreja.map { it.uppercase() }
+
+                                        NotebookCheck(
+                                            label = "1ª Vez",
+                                            checked = statusList.contains("PRIMEIRA_VEZ") || statusList.contains("PRIMEIRA VEZ")
+                                        )
+                                        NotebookCheck(
+                                            label = "Afastado",
+                                            checked = statusList.contains("AFASTADO")
+                                        )
+                                        NotebookCheck(
+                                            label = "Membro",
+                                            checked = statusList.contains("MEMBRO")
+                                        )
+                                        NotebookCheck(
+                                            label = "Grupo",
+                                            checked = statusList.contains("GRUPO")
+                                        )
+                                    }
+                                    if (attendance.nomeDoGrupo.isNotBlank()) {
+                                        Spacer(Modifier.height(4.dp))
+                                        NotebookLinedField(label = "Nome do Grupo:", value = attendance.nomeDoGrupo)
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    HorizontalDivider(thickness = 1.dp, color = LineBlue)
                                 }
-                                Spacer(Modifier.height(4.dp))
-                                HorizontalDivider(thickness = 1.dp, color = LineBlue)
+
+                                Spacer(Modifier.height(12.dp))
+
+                                // SEÇÃO 1: Qual é o seu maior problema?
+                                NotebookMultiLineSection(
+                                    title = "Qual é o seu maior problema?",
+                                    value = attendance.maiorProblema
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+
+                                // SEÇÃO 2: Os cultos que devem ser freqüentados
+                                NotebookMultiLineSection(
+                                    title = "Os cultos que devem ser freqüentados:",
+                                    value = attendance.cultosAFrequentar
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+
+                                // SEÇÃO 3: Responsável pelo acompanhamento
+                                NotebookLinedField(
+                                    label = "Responsável pelo acompanhamento:",
+                                    value = attendance.responsavelAcompanhamento
+                                )
+
+                                Spacer(Modifier.height(10.dp))
+
+                                // SEÇÃO RODAPÉ: Atendimento e Visto do Pastor
+                                NotebookLinedField(
+                                    label = "Data do Atendimento:",
+                                    value = attendance.dataAtendimento.toAttendanceDisplayDate()
+                                )
+                                NotebookLinedField(
+                                    label = "Visto do Pastor:",
+                                    value = attendance.vistoDoPastor
+                                )
                             }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            // SEÇÃO 1: Qual é o seu maior problema?
-                            NotebookMultiLineSection(
-                                title = "Qual é o seu maior problema?",
-                                value = attendance.maiorProblema
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            // SEÇÃO 2: Os cultos que devem ser freqüentados
-                            NotebookMultiLineSection(
-                                title = "Os cultos que devem ser freqüentados:",
-                                value = attendance.cultosAFrequentar
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            // SEÇÃO 3: Responsável pelo acompanhamento
-                            NotebookLinedField(
-                                label = "Responsável pelo acompanhamento:",
-                                value = attendance.responsavelAcompanhamento
-                            )
-
-                            Spacer(Modifier.height(10.dp))
-
-                            // SEÇÃO RODAPÉ: Atendimento e Visto do Pastor
-                            NotebookLinedField(
-                                label = "Data do Atendimento:",
-                                value = attendance.dataAtendimento.toAttendanceDisplayDate()
-                            )
-                            NotebookLinedField(
-                                label = "Visto do Pastor:",
-                                value = attendance.vistoDoPastor
-                            )
                         }
                     }
+                }
+
+                if (attendances.size > 1) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "📖 Arraste para o lado para virar a página (${pagerState.currentPage + 1} de ${attendances.size})",
+                        fontSize = 12.sp,
+                        fontStyle = FontStyle.Italic,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
                 }
 
                 Spacer(Modifier.height(18.dp))
 
                 // BOTÕES DE AÇÃO DA FICHA
                 Button(
-                    onClick = onEdit,
+                    onClick = { onEdit(currentAttendance) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -349,7 +390,6 @@ fun AttendanceDetailsScreen(
                 }
             }
         }
-
     }
 }
 
@@ -466,7 +506,39 @@ private fun NotebookCheck(
 fun AttendanceDetailsScreenPreview() {
     MaterialTheme {
         AttendanceDetailsScreen(
-            attendance = AttendanceItem(
+            attendances = listOf(
+                AttendanceItem(
+                    id = "1",
+                    nome = "João da Silva",
+                    endereco = "Rua das Flores, 123",
+                    bairro = "Centro",
+                    telefone = "(11) 91234-5678",
+                    email = "joao.silva@email.com",
+                    situacaoNaIgreja = listOf("MEMBRO"),
+                    maiorProblema = "Problema de saúde e busca por fortalecimento espiritual.",
+                    cultosAFrequentar = "Domingo às 18h e Quarta-feira às 19h30.",
+                    responsavelAcompanhamento = "Pastor José",
+                    dataAtendimento = "2024-06-15",
+                    vistoDoPastor = "Visto pelo Pastor",
+                    fotoBase64 = ""
+                ),
+                AttendanceItem(
+                    id = "2",
+                    nome = "Maria Oliveira",
+                    endereco = "Av. Principal, 456",
+                    bairro = "Jardim",
+                    telefone = "(11) 98765-4321",
+                    email = "maria@email.com",
+                    situacaoNaIgreja = listOf("PRIMEIRA_VEZ"),
+                    maiorProblema = "Dúvidas sobre a fé.",
+                    cultosAFrequentar = "Domingo às 18h",
+                    responsavelAcompanhamento = "Pr. Carlos",
+                    dataAtendimento = "2024-06-16",
+                    vistoDoPastor = "Visto",
+                    fotoBase64 = ""
+                )
+            ),
+            initialAttendance = AttendanceItem(
                 id = "1",
                 nome = "João da Silva",
                 endereco = "Rua das Flores, 123",

@@ -47,7 +47,7 @@ private const val PRIVACY_POLICY_URL = "https://leandro311985.github.io/UniBook/
 @Composable
 fun HomeScreen(
     onAttendanceClick: () -> Unit = {},
-    onViewAttendance: (AttendanceItem) -> Unit = {},
+    onViewAttendance: (AttendanceItem, List<AttendanceItem>) -> Unit = { _, _ -> },
     onEditAttendance: (AttendanceItem) -> Unit = {}
 ) {
     val viewModel: HomeViewModel = koinViewModel()
@@ -70,7 +70,10 @@ fun HomeScreen(
             viewModel.updateUserProfile(nickname, phone, ministry)
         },
         onAttendanceClick = onAttendanceClick,
-        onViewAttendance = onViewAttendance,
+        onViewAttendance = { item ->
+            val attendances = (uiState as? HomeUiState.Success)?.attendances ?: listOf(item)
+            onViewAttendance(item, attendances)
+        },
         onEditAttendance = onEditAttendance,
         onRefresh = { viewModel.loadAttendances() }
     )

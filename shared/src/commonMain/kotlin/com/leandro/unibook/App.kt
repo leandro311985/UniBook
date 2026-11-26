@@ -25,6 +25,7 @@ fun App() {
     KoinContext {
         var currentScreen by remember { mutableStateOf(AppScreenState.HOME) }
         var selectedAttendance by remember { mutableStateOf<AttendanceItem?>(null) }
+        var currentAttendances by remember { mutableStateOf<List<AttendanceItem>>(emptyList()) }
         val deleteAttendance: DeleteAttendanceUseCase = koinInject()
 
         MaterialTheme(colorScheme = AppColors.ColorScheme) {
@@ -35,8 +36,9 @@ fun App() {
                                 selectedAttendance = null
                                 currentScreen = AppScreenState.FORM
                             },
-                            onViewAttendance = { attendance ->
+                            onViewAttendance = { attendance, list ->
                                 selectedAttendance = attendance
+                                currentAttendances = list
                                 currentScreen = AppScreenState.DETAILS
                             },
                             onEditAttendance = { attendance ->
@@ -50,10 +52,14 @@ fun App() {
                         )
                         AppScreenState.DETAILS -> selectedAttendance?.let { attendance ->
                             AttendanceDetailsScreen(
-                                attendance = attendance,
+                                attendances = currentAttendances.ifEmpty { listOf(attendance) },
+                                initialAttendance = attendance,
                                 onBack = { currentScreen = AppScreenState.HOME },
-                                onEdit = { currentScreen = AppScreenState.FORM },
-                                onDelete = { deleteAttendance(attendance.id) },
+                                onEdit = { editedAttendance ->
+                                    selectedAttendance = editedAttendance
+                                    currentScreen = AppScreenState.FORM
+                                },
+                                onDelete = { att -> deleteAttendance(att.id) },
                                 onDeleted = { currentScreen = AppScreenState.HOME }
                             )
                         } ?: HomeScreen()

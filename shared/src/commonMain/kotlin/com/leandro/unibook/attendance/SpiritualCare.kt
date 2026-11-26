@@ -2,6 +2,7 @@ package com.leandro.unibook.attendance
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
@@ -359,11 +360,49 @@ fun AttendanceScreen(
 
                         if (selectedSituation == ChurchSituation.GRUPO) {
                             Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Selecione o grupo / ministério:",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Navy
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            val groups = listOf("FTU", "FJU", "EVG", "CALEBE", "EBI", "OBREIROS")
+                            groups.chunked(3).forEach { rowGroups ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    rowGroups.forEach { group ->
+                                        val isSelected = groupName.equals(group, ignoreCase = true)
+                                        Surface(
+                                            onClick = { groupName = group },
+                                            modifier = Modifier.weight(1f).height(40.dp),
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) Navy else Color(0xFFF0F4F8),
+                                            border = if (!isSelected) BorderStroke(1.dp, Navy.copy(alpha = 0.3f)) else null
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    text = group,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSelected) Color.White else Navy
+                                                )
+                                            }
+                                        }
+                                    }
+                                    repeat(3 - rowGroups.size) {
+                                        Spacer(Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
                             FormInput(
-                                label = "Nome do grupo / ministério *",
+                                label = "Ou digite outro grupo / ministério:",
                                 value = groupName,
                                 onValueChange = { groupName = it },
-                                placeholder = "Ex: Evangelistas, Grupo de Oração"
+                                placeholder = "Ex: Outro grupo"
                             )
                         }
                     }
