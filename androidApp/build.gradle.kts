@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -24,20 +26,25 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
-fun signingValue(property: String, environmentVariable: String) =
-    providers.gradleProperty(property)
-        .orElse(providers.environmentVariable(environmentVariable))
-        .orNull
-
-val releaseSigningValues = listOf(
-    signingValue("unibook.signing.storeFile", "ANDROID_KEYSTORE_PATH"),
-    signingValue("unibook.signing.storePassword", "ANDROID_KEYSTORE_PASSWORD"),
-    signingValue("unibook.signing.keyAlias", "ANDROID_KEY_ALIAS"),
-    signingValue("unibook.signing.keyPassword", "ANDROID_KEY_PASSWORD")
-)
-require(releaseSigningValues.all { it.isNullOrBlank() } || releaseSigningValues.all { !it.isNullOrBlank() }) {
-    "Set all release signing properties (unibook.signing.*) or environment variables: ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+
+fun getSigningProp(gradleProp: String, propKey: String, envVar: String): String? {
+    return keystoreProperties.getProperty(propKey)
+        ?: providers.gradleProperty(gradleProp).orElse(providers.environmentVariable(envVar)).orNull
+}
+
+val storeFileStr = getSigningProp("unibook.signing.storeFile", "storeFile", "ANDROID_KEYSTORE_PATH")
+val storePasswordStr = getSigningProp("unibook.signing.storeFile", "storePassword", "ANDROID_KEYSTORE_PASSWORD") // wait, storePassword key
+// let's correct storePassword key in keystoreProperties:
+val storePasswordStrCorrect = getSigningProp("unibook.signing.storePassword", "storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val keyAliasStr = getSigningProp("unibook.signing.keyAlias", "keyAlias", "ANDROID_KEY_ALIAS")
+val keyPasswordStr = getSigningProp("unibook.signing.keyPassword", "keyPassword", "ANDROID_KEY_PASSWORD")
+
+val releaseSigningValues = listOf(storeFileStr, storePasswordStrCorrect, keyAliasStr, keyPasswordStr)
 
 android {
     namespace = "com.leandro.unibook"
@@ -53,10 +60,10 @@ android {
     signingConfigs {
         if (releaseSigningValues.all { !it.isNullOrBlank() }) {
             create("release") {
-                storeFile = file(releaseSigningValues[0]!!)
-                storePassword = releaseSigningValues[1]
-                keyAlias = releaseSigningValues[2]
-                keyPassword = releaseSigningValues[3]
+                storeFile = file(storeFileStr!!)
+                storePassword = storePasswordStrCorrect
+                keyAlias = keyAliasStr
+                keyPassword = keyPasswordStr
             }
         }
     }
